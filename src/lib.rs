@@ -599,33 +599,47 @@ fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoRespo
         .and_then(|o| o.metadata.get("department").and_then(|v| v.as_str()))
         .map(|s| s.to_string());
 
-    // Stub hero content based on current zone. In a real deployment this would
-    // come from a CMS keyed by (venue_id, zone) — the spatial layer only needs
-    // to tell the content layer *where* the visitor is.
+    // Stub reading-list teaser based on current zone. In a real deployment this
+    // would come from a CMS keyed by (venue_id, zone) — the spatial layer only
+    // needs to tell the content layer *where* the visitor is. The HeroPromo
+    // struct is reused as-is: `title` names the list, `coupon_code` is the
+    // list identifier a client could dereference to fetch the full items.
     let hero = current_dept.as_ref().map(|dept| {
         match dept.as_str() {
             "children" => HeroPromo {
-                title: "Storytime today at 3:00pm — all ages welcome".into(),
-                coupon_code: Some("EVT-STORYTIME".into()),
-            },
-            "reference" => HeroPromo {
-                title: "Librarian on duty — ask for research help".into(),
-                coupon_code: None,
+                title: "Kids' staff picks: picture books for ages 3–7".into(),
+                coupon_code: Some("READ-KIDS-PICTURE".into()),
             },
             "fiction" => HeroPromo {
-                title: "New arrivals: this week's bestsellers are in".into(),
-                coupon_code: Some("NEW-ARRIVALS".into()),
+                title: "Fiction staff picks: new this month".into(),
+                coupon_code: Some("READ-FIC-STAFF".into()),
+            },
+            "nonfiction" => HeroPromo {
+                title: "Nonfiction staff picks".into(),
+                coupon_code: Some("READ-NF-STAFF".into()),
+            },
+            "reference" => HeroPromo {
+                title: "Research guides for common questions".into(),
+                coupon_code: Some("READ-REF-GUIDES".into()),
             },
             "periodicals" => HeroPromo {
-                title: "Today's papers and magazines have arrived".into(),
-                coupon_code: None,
+                title: "Featured magazines this week".into(),
+                coupon_code: Some("READ-MAG-FEATURED".into()),
+            },
+            "audiovisual" => HeroPromo {
+                title: "New audiobooks and DVDs".into(),
+                coupon_code: Some("READ-AV-NEW".into()),
             },
             "computers" => HeroPromo {
-                title: "Free Wi-Fi — computers reservable in 1-hour blocks".into(),
-                coupon_code: None,
+                title: "Digital resources & online databases guide".into(),
+                coupon_code: Some("READ-DIGITAL".into()),
+            },
+            "community" => HeroPromo {
+                title: "Community book club: this month's pick".into(),
+                coupon_code: Some("READ-COMMUNITY-BC".into()),
             },
             _ => HeroPromo {
-                title: format!("Welcome to the {dept} section"),
+                title: format!("Reading list for the {dept} section"),
                 coupon_code: None,
             },
         }

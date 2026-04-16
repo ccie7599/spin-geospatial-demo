@@ -99,7 +99,7 @@ Floor-plan coordinate conversion. Maps a real-world lat/lon into the `[0, 1] × 
 
 ### `GET /api/v1/stores/:id/context?lat=…&lon=…`
 
-Zone-aware content. Returns a `hero` block (title + optional identifier) chosen by the current zone plus a distance-sorted list of nearby sections. In a real deployment the hero block would come from a CMS — here it's hard-coded per zone in `lib.rs` to keep the demo self-contained.
+Zone-aware content. Returns a `hero` block chosen by the current zone plus a distance-sorted list of nearby sections. In the library demo, the hero is a **reading-list teaser** — `title` names the list (e.g. *"Fiction staff picks: new this month"*) and `couponCode` (kept as-is from the underlying generic schema) carries the list identifier a client would dereference to fetch the full items. In a real deployment the hero block would come from a CMS.
 
 ### System / ingest APIs
 

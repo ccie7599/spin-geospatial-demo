@@ -52,7 +52,9 @@ echo "$resp" | grep -q '"name": "reference"' && pass "find returns reference sec
 
 echo "[6/6] context in computers zone"
 resp=$(hit GET "/api/v1/stores/test-001/context?lat=40.71282&lon=-74.00590")
-echo "$resp" | grep -q 'computers\|Wi-Fi' && pass "context returns zone content" || fail "context" "$resp"
+echo "$resp" | grep -q '"zone": "computers"' && \
+  echo "$resp" | grep -q 'Digital resources' && pass "context returns reading list for zone" \
+  || fail "context" "$resp"
 
 echo
 echo "Results: $PASS passed, $FAIL failed"

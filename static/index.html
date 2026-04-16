@@ -91,6 +91,24 @@ body {
 .call-body { padding: 0 12px 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 10px; display: none; }
 .call.open .call-body { display: block; }
 
+.reading {
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px 14px;
+  min-height: 70px;
+}
+.reading-empty { color: var(--dim); font-size: 12px; font-style: italic; }
+.reading-tag {
+  display: inline-block; padding: 2px 7px; border-radius: 3px; margin-bottom: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.3px;
+  background: rgba(57,210,192,0.12); color: var(--cyan); border: 1px solid rgba(57,210,192,0.25);
+}
+.reading-title {
+  font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.45;
+}
+.reading-id {
+  margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--dim);
+}
+
 .footer {
   padding: 12px 20px; border-top: 1px solid var(--border);
   font-size: 11px; color: var(--dim); font-family: var(--mono);
@@ -145,7 +163,8 @@ body {
         Drag the <b>orange pin</b> anywhere on the map. The page calls
         <code>GET /api/v1/checkin</code> on every drag and updates the live
         response. When you're within ~35 m of a library, the service detects
-        the venue and, if you're within a section (~6 m), reports the zone.
+        the venue and, if you're within a section (~6 m), reports the zone
+        and surfaces the reading list for that section.
         <div class="tip">Full 2,274 US public libraries loaded from OpenStreetMap.</div>
       </div>
     </div>
@@ -169,6 +188,13 @@ body {
           <div class="status-label">nearest</div>
           <div class="status-value" id="nearest" style="font-size: 12px;">—</div>
         </div>
+      </div>
+    </div>
+
+    <div class="side-section">
+      <h3>Reading list for this section</h3>
+      <div class="reading" id="reading">
+        <div class="reading-empty">Stand inside a section to see its reading list.</div>
       </div>
     </div>
 
@@ -288,13 +314,32 @@ function updateStatus(result) {
     result.nearestStore ? `${result.nearestStore.name} · ${result.nearestStore.distanceText}` : '—';
 }
 
+function updateReading(ctx) {
+  const el = document.getElementById('reading');
+  const hero = ctx && ctx.content && ctx.content.hero;
+  if (!hero) {
+    el.innerHTML = '<div class="reading-empty">Stand inside a section to see its reading list.</div>';
+    return;
+  }
+  const zone = ctx.zone || 'section';
+  const tag = hero.couponCode ? `<div class="reading-id">list id: ${hero.couponCode}</div>` : '';
+  el.innerHTML = `
+    <span class="reading-tag">${zone}</span>
+    <div class="reading-title">${hero.title}</div>
+    ${tag}
+  `;
+}
+
 async function checkin() {
   const { lat, lng } = you.getLatLng();
   const resp = await apiCall(`/api/v1/checkin?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}&deviceId=${DEVICE_ID}`);
   if (resp) updateStatus(resp);
   if (resp?.store?.storeId) {
-    // fetch context for the current zone
-    await apiCall(`/api/v1/stores/${resp.store.storeId}/context?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}`);
+    // fetch context for the current zone and surface its reading list
+    const ctx = await apiCall(`/api/v1/stores/${resp.store.storeId}/context?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}`);
+    updateReading(ctx);
+  } else {
+    updateReading(null);
   }
 }
 
