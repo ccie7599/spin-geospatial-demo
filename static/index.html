@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spin-geospatial-demo · libraries</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --card: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --dim: #6e7681;
+  --blue: #58a6ff;
+  --green: #3fb950;
+  --orange: #f0883e;
+  --cyan: #39d2c0;
+  --font: 'Inter', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+html, body { height: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; height: 52px;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+.brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+.brand-sub { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 13px; }
+.header-right { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.repo-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--muted); text-decoration: none; font-size: 11px; font-family: var(--mono);
+  transition: 0.2s ease;
+}
+.repo-link:hover { color: var(--blue); border-color: rgba(88,166,255,0.4); background: rgba(88,166,255,0.06); }
+.repo-link svg { width: 14px; height: 14px; fill: currentColor; }
+
+.layout { flex: 1; display: flex; overflow: hidden; }
+.map-panel { flex: 1; position: relative; }
+#map { width: 100%; height: 100%; background: #0a0d12; }
+.leaflet-container { background: #0a0d12; font-family: var(--font); }
+
+.side {
+  width: 420px; min-width: 420px;
+  background: var(--panel); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.side-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.side-section h3 {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--muted); margin-bottom: 10px;
+}
+.intro { font-size: 13px; color: var(--text); line-height: 1.55; }
+.intro code { font-family: var(--mono); font-size: 12px; color: var(--cyan); background: var(--card); padding: 1px 5px; border-radius: 3px; }
+.intro .tip { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+.status {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  font-family: var(--mono); font-size: 12px;
+}
+.status-box { background: var(--card); padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border); }
+.status-label { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.status-value { color: var(--text); margin-top: 2px; font-weight: 500; }
+.status-value.ok { color: var(--green); }
+.status-value.miss { color: var(--orange); }
+
+.api-calls { flex: 1; overflow-y: auto; padding: 14px 20px 20px; }
+.call { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+.call-head { padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11px; cursor: pointer; }
+.call-head .meth { display: inline-flex; gap: 6px; align-items: center; }
+.call-head .badge { padding: 1px 6px; border-radius: 3px; font-weight: 600; font-size: 10px; }
+.badge.get { background: rgba(88,166,255,0.15); color: var(--blue); }
+.call-head .path { color: var(--text); }
+.call-head .ms { color: var(--dim); font-size: 10px; }
+.call-body { padding: 0 12px 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 10px; display: none; }
+.call.open .call-body { display: block; }
+
+.footer {
+  padding: 12px 20px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--dim); font-family: var(--mono);
+}
+.footer a { color: var(--blue); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+.legend {
+  position: absolute; bottom: 16px; left: 16px; z-index: 500;
+  background: rgba(22, 27, 34, 0.92); border: 1px solid var(--border); border-radius: 6px;
+  padding: 10px 14px; font-size: 11px; font-family: var(--mono); color: var(--muted);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.legend-row { display: flex; align-items: center; gap: 8px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-dot.you { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+.legend-dot.lib { background: var(--cyan); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">
+    <span class="dot"></span>
+    spin-geospatial-demo
+    <span class="brand-sub">US public libraries · Spin KV + geohash cell painting</span>
+  </div>
+  <div class="header-right">
+    <a class="repo-link" href="https://github.com/ccie7599/spin-geospatial-demo" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      View source
+    </a>
+    <span id="status">ready</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <div class="map-panel">
+    <div id="map"></div>
+    <div class="legend">
+      <div class="legend-row"><span class="legend-dot you"></span> You (drag to move)</div>
+      <div class="legend-row"><span class="legend-dot lib"></span> Library (click for sections)</div>
+    </div>
+  </div>
+
+  <aside class="side">
+
+    <div class="side-section">
+      <h3>What you're seeing</h3>
+      <div class="intro">
+        Drag the <b>orange pin</b> anywhere on the map. The page calls
+        <code>GET /api/v1/checkin</code> on every drag and updates the live
+        response. When you're within ~35 m of a library, the service detects
+        the venue and, if you're within a section (~6 m), reports the zone.
+        <div class="tip">Full 2,274 US public libraries loaded from OpenStreetMap.</div>
+      </div>
+    </div>
+
+    <div class="side-section">
+      <h3>Current check-in</h3>
+      <div class="status">
+        <div class="status-box">
+          <div class="status-label">in_venue</div>
+          <div class="status-value" id="inStore">—</div>
+        </div>
+        <div class="status-box">
+          <div class="status-label">zone</div>
+          <div class="status-value" id="zone">—</div>
+        </div>
+        <div class="status-box" style="grid-column: 1 / 3;">
+          <div class="status-label">venue</div>
+          <div class="status-value" id="venueName" style="font-size: 12px;">—</div>
+        </div>
+        <div class="status-box" style="grid-column: 1 / 3;">
+          <div class="status-label">nearest</div>
+          <div class="status-value" id="nearest" style="font-size: 12px;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="api-calls" id="calls">
+      <h3 style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 10px;">Recent API calls</h3>
+    </div>
+
+    <div class="footer">
+      Source · <a href="https://github.com/ccie7599/spin-geospatial-demo" target="_blank" rel="noopener">ccie7599/spin-geospatial-demo</a>
+    </div>
+
+  </aside>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const DEVICE_ID = 'demo-' + Math.random().toString(36).slice(2, 8);
+const status = document.getElementById('status');
+const callsEl = document.getElementById('calls');
+
+// Map init — default to NYC
+const DEFAULT = [40.7531, -73.9822];
+const map = L.map('map', { zoomControl: true }).setView(DEFAULT, 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  subdomains: 'abcd', maxZoom: 19,
+}).addTo(map);
+
+// "You" marker — draggable
+const youIcon = L.divIcon({
+  className: 'you-icon',
+  html: '<div style="width:16px;height:16px;border-radius:50%;background:#f0883e;box-shadow:0 0 10px #f0883e;border:2px solid #fff;"></div>',
+  iconSize: [16, 16], iconAnchor: [8, 8],
+});
+const you = L.marker(DEFAULT, { icon: youIcon, draggable: true }).addTo(map);
+
+// Library markers, loaded lazily on map moveend
+const libIcon = L.divIcon({
+  className: 'lib-icon',
+  html: '<div style="width:10px;height:10px;border-radius:50%;background:#39d2c0;border:1px solid #0d1117;"></div>',
+  iconSize: [10, 10], iconAnchor: [5, 5],
+});
+const libMarkers = new Map();
+
+async function loadLibrariesInView() {
+  if (map.getZoom() < 11) {
+    libMarkers.forEach(m => map.removeLayer(m));
+    libMarkers.clear();
+    return;
+  }
+  const c = map.getCenter();
+  const geohash = '';
+  // Query at precision 5 for broad view, filter to viewport
+  const resp = await apiCall(`/query/point/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}/5`, 'preview');
+  if (!resp || !resp.objects) return;
+  const bounds = map.getBounds();
+  const seen = new Set();
+  for (const o of resp.objects) {
+    if (o.type !== 'store') continue;
+    if (!bounds.contains([o.lat, o.lon])) continue;
+    seen.add(o.id);
+    if (libMarkers.has(o.id)) continue;
+    const m = L.marker([o.lat, o.lon], { icon: libIcon, title: o.metadata?.name || o.id });
+    m.bindPopup(`<b>${o.metadata?.name || o.id}</b><br><small>${o.metadata?.address || ''}</small>`);
+    m.addTo(map);
+    libMarkers.set(o.id, m);
+  }
+  // Prune markers not in the current set
+  libMarkers.forEach((m, id) => {
+    if (!seen.has(id)) { map.removeLayer(m); libMarkers.delete(id); }
+  });
+}
+
+async function apiCall(path, tag = '') {
+  const started = performance.now();
+  status.textContent = 'loading…';
+  let ok = false, body = null;
+  try {
+    const r = await fetch(path);
+    body = await r.json();
+    ok = r.ok;
+  } catch (e) {
+    body = { error: e.message };
+  }
+  const ms = Math.round(performance.now() - started);
+  status.textContent = `ready · ${ms} ms`;
+  if (tag !== 'preview') logCall(path, ms, ok, body);
+  return body;
+}
+
+function logCall(path, ms, ok, body) {
+  const el = document.createElement('div');
+  el.className = 'call open';
+  el.innerHTML = `
+    <div class="call-head">
+      <div class="meth"><span class="badge get">GET</span><span class="path">${path}</span></div>
+      <span class="ms" style="color:${ok ? 'var(--green)' : 'var(--orange)'}">${ms} ms</span>
+    </div>
+    <pre class="call-body">${JSON.stringify(body, null, 2)}</pre>
+  `;
+  el.querySelector('.call-head').addEventListener('click', () => el.classList.toggle('open'));
+  const sentinel = callsEl.children[0].nextSibling;
+  callsEl.insertBefore(el, sentinel);
+  while (callsEl.querySelectorAll('.call').length > 6) {
+    callsEl.querySelectorAll('.call')[callsEl.querySelectorAll('.call').length - 1].remove();
+  }
+}
+
+function updateStatus(result) {
+  document.getElementById('inStore').textContent = result.inStore ? 'true' : 'false';
+  document.getElementById('inStore').className = 'status-value ' + (result.inStore ? 'ok' : 'miss');
+  document.getElementById('zone').textContent = result.zone || '—';
+  document.getElementById('venueName').textContent =
+    result.store ? (result.store.name + (result.store.address ? ' · ' + result.store.address : '')) : '—';
+  document.getElementById('nearest').textContent =
+    result.nearestStore ? `${result.nearestStore.name} · ${result.nearestStore.distanceText}` : '—';
+}
+
+async function checkin() {
+  const { lat, lng } = you.getLatLng();
+  const resp = await apiCall(`/api/v1/checkin?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}&deviceId=${DEVICE_ID}`);
+  if (resp) updateStatus(resp);
+  if (resp?.store?.storeId) {
+    // fetch context for the current zone
+    await apiCall(`/api/v1/stores/${resp.store.storeId}/context?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}`);
+  }
+}
+
+let debounce;
+you.on('drag', () => {
+  clearTimeout(debounce);
+  debounce = setTimeout(checkin, 120);
+});
+map.on('moveend', loadLibrariesInView);
+
+// Initial load
+(async () => {
+  await loadLibrariesInView();
+  await checkin();
+})();
+</script>
+</body>
+</html>

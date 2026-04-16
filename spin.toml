@@ -1,0 +1,44 @@
+spin_manifest_version = 2
+
+[application]
+name = "spin-geospatial-demo"
+version = "0.1.0"
+description = "Geohash spatial proximity on Spin KV with cell painting + upward write amplification. Demo dataset: US public libraries."
+authors = ["ccie7599"]
+
+# API routes — geospatial Rust WASM component
+[[trigger.http]]
+route = "/api/..."
+component = "geospatial"
+
+[[trigger.http]]
+route = "/ingest/..."
+component = "geospatial"
+
+[[trigger.http]]
+route = "/query/..."
+component = "geospatial"
+
+[[trigger.http]]
+route = "/health"
+component = "geospatial"
+
+# Static file serving — demo UI
+[[trigger.http]]
+route = "/..."
+component = "fileserver"
+
+[component.geospatial]
+source = "target/wasm32-wasip1/release/spin_geospatial_demo.wasm"
+key_value_stores = ["default"]
+
+[component.geospatial.build]
+command = "cargo build --target wasm32-wasip1 --release"
+watch = ["src/**/*.rs", "Cargo.toml"]
+
+[component.fileserver]
+source = { url = "https://github.com/fermyon/spin-fileserver/releases/download/v0.3.0/spin_static_fs.wasm", digest = "sha256:ef88708817e107bf49985c7cefe4dd1f199bf26f6727819183d5c996baa3d148" }
+files = [{ source = "static", destination = "/" }]
+
+[component.fileserver.environment]
+FALLBACK_PATH = "/index.html"

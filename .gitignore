@@ -1,0 +1,21 @@
+target/
+*.wasm
+.spin/
+.spin-aka/
+node_modules/
+
+# Local state / runtime data
+data/*.db
+data/*.db-journal
+logs/*.json
+logs/*.log
+
+# Editor / OS cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
