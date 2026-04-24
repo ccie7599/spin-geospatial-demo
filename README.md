@@ -1,8 +1,12 @@
-# spin-geospatial-demo
+# Step Inside
 
-Edge-native geospatial proximity service on **Fermyon Spin** (runs on [Akamai Functions](https://techdocs.akamai.com/cloud-computing/docs/fermyon-wasm-functions), locally via `spin up`, or anywhere else Spin runs).
+*From the globe down to the shelf.*
 
-The demo ingests **2,274 US public libraries** and exposes an API that answers, in ~2–4 ms of compute time:
+**Live demo:** [geospatial.connected-cloud.io](https://geospatial.connected-cloud.io/)
+
+Edge-native venue proximity on **[Akamai Functions](https://techdocs.akamai.com/cloud-computing/docs/fermyon-wasm-functions)** (Fermyon Spin, WASM) — the same spatial primitives work for libraries, retail, stadiums, hotels, or anywhere visitors cross a threshold. Deployable from zero to live in minutes on Akamai's managed serverless edge, no cluster, no VMs, no runtime to patch.
+
+The reference demo ingests **17,980 US public libraries** (OpenStreetMap, ODbL) and exposes an API that answers, in ~2–4 ms of compute time:
 
 - *Am I inside a library right now? Which one, and which section am I in?*
 - *What are the nearest libraries to this lat/lon?*
@@ -42,9 +46,9 @@ spin build                                  # compiles to wasm32-wasip1
 spin up                                      # listens on :3000
 
 # In another terminal:
-./load-libraries.sh http://localhost:3000    # full 2,274 libraries (~3 min)
+./load-libraries.sh http://localhost:3000    # full 17,980 libraries (~15-30 min)
 # or, for a quick look:
-LIMIT=100 ./load-libraries.sh http://localhost:3000
+LIMIT=200 ./load-libraries.sh http://localhost:3000
 
 ./test-flow.sh http://localhost:3000         # 6 smoke tests
 ```
@@ -120,7 +124,7 @@ docs/
   DIAGRAMS.md         System architecture + ingest + query mermaid diagrams
   ARCHITECTURE.md     API design + venue/section model
 sample-data/
-  us_libraries.csv    2,274 US public libraries (OpenStreetMap, ODbL)
+  us_libraries.csv    17,980 US public libraries (OpenStreetMap, ODbL)
 static/
   index.html          Minimal Leaflet-based live demo page
 load-libraries.sh     Ingests the CSV via /ingest/store
@@ -133,7 +137,7 @@ Cargo.toml            Rust crate manifest
 
 ## Dataset
 
-`sample-data/us_libraries.csv` is extracted from [OpenStreetMap](https://www.openstreetmap.org) (`amenity=library` within the US) and is **© OpenStreetMap contributors, ODbL 1.0**. Only libraries that OSM has tagged with both city and state are included (2,274 rows). The lat/lon columns reflect what OSM has; some outlying tags may be approximate. For a production deployment, combine this with the [IMLS Public Libraries Survey](https://www.imls.gov/research-evaluation/surveys-data/public-libraries-survey) facilities file for authoritative locations + operating hours.
+`sample-data/us_libraries.csv` is extracted from [OpenStreetMap](https://www.openstreetmap.org) (`amenity=library` within the US, nodes + way centroids) and is **© OpenStreetMap contributors, ODbL 1.0**. 17,980 rows after de-duplication and filtering of law/medical/university-internal libraries. The lat/lon columns reflect what OSM has; some outlying tags may be approximate or incomplete. For a production deployment, combine this with the [IMLS Public Libraries Survey](https://www.imls.gov/research-evaluation/surveys-data/public-libraries-survey) facilities file for authoritative locations + operating hours.
 
 The demo loader also synthesizes a fixed set of internal sections per library (`children`, `fiction`, `nonfiction`, `reference`, `periodicals`, `audiovisual`, `computers`, `community`) as offsets relative to the library center. These are illustrative — OSM doesn't generally tag internal sections.
 
