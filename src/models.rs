@@ -400,8 +400,18 @@ pub struct ContextResponse {
 pub struct ContextContent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hero: Option<HeroPromo>,
+    #[serde(rename = "readingList", skip_serializing_if = "Vec::is_empty")]
+    pub reading_list: Vec<Book>,
     #[serde(rename = "departmentsNearby")]
     pub departments_nearby: Vec<DepartmentContext>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Book {
+    pub title: String,
+    pub author: String,
+    #[serde(rename = "callNumber")]
+    pub call_number: String,
 }
 
 #[derive(Debug, Serialize)]

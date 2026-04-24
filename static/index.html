@@ -3,357 +3,3472 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>spin-geospatial-demo · libraries</title>
+<title>Step Inside</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #0d1117;
-  --panel: #161b22;
-  --card: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --muted: #8b949e;
-  --dim: #6e7681;
-  --blue: #58a6ff;
-  --green: #3fb950;
-  --orange: #f0883e;
-  --cyan: #39d2c0;
-  --font: 'Inter', -apple-system, sans-serif;
-  --mono: 'JetBrains Mono', monospace;
+  /* Warm library palette — parchment cream, muted navy, forest + terracotta accents */
+  --bg-primary: #f5eedd;
+  --bg-secondary: #efe5cd;
+  --bg-card: #fbf4e3;
+  --bg-card-hover: #f3e9cf;
+  --border: #d6ccb4;
+  --text-primary: #2b3441;
+  --text-secondary: #5e6a7d;
+  --text-muted: #8a94a6;
+  --accent-blue: #2d5a8e;       /* library card blue */
+  --accent-green: #5c7c54;      /* forest green */
+  --accent-orange: #c17d4a;     /* terracotta */
+  --accent-cyan: #4a8b9e;       /* muted teal */
+  --accent-purple: #8e6b8e;     /* dusty plum */
+  --accent-red: #b15858;
+  --font-ui: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Lora', Georgia, serif;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --transition: 300ms ease;
+  --transition-fast: 200ms ease;
 }
-html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
+  font-family: var(--font-ui);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- HEADER ---- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.3px;
+}
+.header-brand .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+}
+.scene-tabs {
+  display: flex;
+  gap: 4px;
+}
+.scene-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: var(--font-ui);
+  white-space: nowrap;
+}
+.scene-tab:hover { color: var(--text-primary); background: var(--bg-card); }
+.scene-tab.active {
+  color: var(--accent-blue);
+  background: rgba(88,166,255,0.1);
+  border-color: rgba(88,166,255,0.3);
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.header-status {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  transition: var(--transition-fast);
+}
+.repo-link:hover {
+  color: var(--accent-blue);
+  border-color: rgba(88,166,255,0.4);
+  background: rgba(88,166,255,0.06);
+}
+.repo-link svg { width: 14px; height: 14px; fill: currentColor; }
+
+/* ---- MAIN LAYOUT ---- */
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ---- SIDEBAR ---- */
+.sidebar {
+  width: 320px;
+  min-width: 320px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-
-.header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 20px; height: 52px;
-  background: var(--panel); border-bottom: 1px solid var(--border);
+.sidebar-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
 }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
-.brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
-.brand-sub { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 13px; }
-.header-right { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
-.repo-link {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border: 1px solid var(--border); border-radius: 4px;
-  color: var(--muted); text-decoration: none; font-size: 11px; font-family: var(--mono);
-  transition: 0.2s ease;
+.sidebar-section h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
 }
-.repo-link:hover { color: var(--blue); border-color: rgba(88,166,255,0.4); background: rgba(88,166,255,0.06); }
-.repo-link svg { width: 14px; height: 14px; fill: currentColor; }
-
-.layout { flex: 1; display: flex; overflow: hidden; }
-.map-panel { flex: 1; position: relative; }
-#map { width: 100%; height: 100%; background: #0a0d12; }
-.leaflet-container { background: #0a0d12; font-family: var(--font); }
-
-.side {
-  width: 420px; min-width: 420px;
-  background: var(--panel); border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; overflow: hidden;
+.journey-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.side-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
-.side-section h3 {
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--muted); margin-bottom: 10px;
+.journey-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
 }
-.intro { font-size: 13px; color: var(--text); line-height: 1.55; }
-.intro code { font-family: var(--mono); font-size: 12px; color: var(--cyan); background: var(--card); padding: 1px 5px; border-radius: 3px; }
-.intro .tip { color: var(--muted); font-size: 12px; margin-top: 6px; }
-
-.status {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-  font-family: var(--mono); font-size: 12px;
+.journey-step:hover { background: var(--bg-card); color: var(--text-primary); }
+.journey-step.active { background: rgba(88,166,255,0.1); color: var(--accent-blue); }
+.journey-step.completed { color: var(--accent-green); }
+.step-indicator {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
-.status-box { background: var(--card); padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border); }
-.status-label { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-.status-value { color: var(--text); margin-top: 2px; font-weight: 500; }
-.status-value.ok { color: var(--green); }
-.status-value.miss { color: var(--orange); }
-
-.api-calls { flex: 1; overflow-y: auto; padding: 14px 20px 20px; }
-.call { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
-.call-head { padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11px; cursor: pointer; }
-.call-head .meth { display: inline-flex; gap: 6px; align-items: center; }
-.call-head .badge { padding: 1px 6px; border-radius: 3px; font-weight: 600; font-size: 10px; }
-.badge.get { background: rgba(88,166,255,0.15); color: var(--blue); }
-.call-head .path { color: var(--text); }
-.call-head .ms { color: var(--dim); font-size: 10px; }
-.call-body { padding: 0 12px 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 10px; display: none; }
-.call.open .call-body { display: block; }
-
-.reading {
-  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
-  padding: 12px 14px;
-  min-height: 70px;
+.journey-step.active .step-indicator {
+  border-color: var(--accent-blue);
+  background: rgba(88,166,255,0.15);
+  color: var(--accent-blue);
 }
-.reading-empty { color: var(--dim); font-size: 12px; font-style: italic; }
-.reading-tag {
-  display: inline-block; padding: 2px 7px; border-radius: 3px; margin-bottom: 8px;
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.3px;
-  background: rgba(57,210,192,0.12); color: var(--cyan); border: 1px solid rgba(57,210,192,0.25);
-}
-.reading-title {
-  font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.45;
-}
-.reading-id {
-  margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--dim);
+.journey-step.completed .step-indicator {
+  border-color: var(--accent-green);
+  background: rgba(63,185,80,0.15);
+  color: var(--accent-green);
 }
 
+/* API Response Viewer */
+.api-viewer {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.api-viewer h3 { padding: 16px 16px 0; }
+.api-response-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 16px;
+}
+.api-response-list::-webkit-scrollbar { width: 6px; }
+.api-response-list::-webkit-scrollbar-track { background: transparent; }
+.api-response-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.api-entry {
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.api-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+.api-method {
+  font-weight: 600;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.api-method.get { background: rgba(88,166,255,0.15); color: var(--accent-blue); }
+.api-method.post { background: rgba(63,185,80,0.15); color: var(--accent-green); }
+.api-path { color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.api-status { font-weight: 500; }
+.api-status.ok { color: var(--accent-green); }
+.api-status.err { color: var(--accent-red); }
+.api-time { color: var(--text-muted); }
+.api-body {
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.api-entry.expanded .api-body { display: block; }
+
+/* ---- VIEWPORT ---- */
+.viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#map {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 1;
+  transition: opacity var(--transition);
+}
+#map.hidden { opacity: 0; pointer-events: none; }
+#floorplan {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 2;
+  transition: opacity var(--transition);
+  background: var(--bg-primary);
+}
+#floorplan.hidden { opacity: 0; pointer-events: none; }
+
+/* ---- Overlays ---- */
+.overlay-card {
+  position: absolute;
+  z-index: 50;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: var(--transition);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.store-card {
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 340px;
+  max-width: 460px;
+}
+.store-card.hidden { opacity: 0; transform: translateX(-50%) translateY(20px); pointer-events: none; }
+.store-card h4 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.store-card .address { color: var(--text-secondary); font-size: 13px; margin-bottom: 12px; }
+.store-card .distance { color: var(--accent-cyan); font-size: 12px; font-family: var(--font-mono); margin-bottom: 12px; }
+.store-card .departments-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.dept-tag {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+}
+.dept-tag.default { color: var(--text-secondary); border-color: var(--border); background: var(--bg-card); }
+.dept-tag.default { color: var(--text-secondary); border-color: var(--border); background: rgba(139,148,158,0.1); }
+
+.btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-ui);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.btn-primary {
+  background: var(--accent-blue);
+  color: #fff;
+}
+.btn-primary:hover { background: #79b8ff; }
+.btn-secondary {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--border); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* Promo card */
+.promo-card {
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 380px;
+  max-width: 500px;
+  text-align: center;
+}
+.promo-card.hidden { opacity: 0; transform: translateX(-50%) translateY(20px); pointer-events: none; }
+.promo-card .promo-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; color: var(--accent-orange); }
+.promo-card .promo-coupon {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(240,136,62,0.15);
+  border: 1px dashed var(--accent-orange);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  margin: 8px 0;
+  letter-spacing: 1px;
+}
+.promo-card .promo-zone {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.promo-nearby {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.promo-nearby-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.promo-nearby-item .dept-name { font-weight: 500; color: var(--text-primary); }
+.promo-nearby-item .dept-dist { font-family: var(--font-mono); color: var(--text-muted); font-size: 11px; }
+
+/* Search overlay */
+.search-overlay {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  width: 380px;
+}
+.search-overlay.hidden { display: none; }
+.search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  outline: none;
+  transition: var(--transition-fast);
+}
+.search-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
+.search-input::placeholder { color: var(--text-muted); }
+.search-results {
+  margin-top: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.search-results.hidden { display: none; }
+.search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.search-result-item:hover { background: var(--bg-card-hover); }
+.search-result-item .result-name { font-weight: 500; }
+.search-result-item .result-dist { font-family: var(--font-mono); color: var(--text-muted); font-size: 11px; }
+
+/* Event toast */
+.event-toast {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 500;
+  transition: var(--transition);
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+.event-toast.visible { opacity: 1; transform: translateY(0); }
+.event-toast.enter { border-color: var(--accent-green); color: var(--accent-green); }
+.event-toast.exit { border-color: var(--accent-red); color: var(--accent-red); }
+.event-toast.dept { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.event-toast.info { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+/* Simulation controls */
+.sim-controls {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 55;
+  display: flex;
+  gap: 8px;
+}
+.sim-controls.hidden { display: none; }
+
+/* Info panel on floor plan */
+.floor-info {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 55;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  min-width: 200px;
+}
+.floor-info.hidden { display: none; }
+.floor-info h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+.floor-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+}
+.floor-info-row .label { color: var(--text-muted); }
+.floor-info-row .value { font-family: var(--font-mono); font-weight: 500; }
+
+/* Pulsing dot animation */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(88,166,255,0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(88,166,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(88,166,255,0); }
+}
+@keyframes pulse-orange {
+  0% { box-shadow: 0 0 0 0 rgba(240,136,62,0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(240,136,62,0); }
+  100% { box-shadow: 0 0 0 0 rgba(240,136,62,0); }
+}
+.leaflet-marker-icon.user-dot {
+  background: var(--accent-blue);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+.leaflet-marker-icon.store-dot {
+  background: var(--accent-orange);
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 50%;
+  animation: pulse-orange 3s infinite;
+}
+.store-popup .leaflet-popup-content-wrapper {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.store-popup .leaflet-popup-tip { background: var(--bg-card); }
+
+/* FOOTER — API call log */
 .footer {
-  padding: 12px 20px; border-top: 1px solid var(--border);
-  font-size: 11px; color: var(--dim); font-family: var(--mono);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
 }
-.footer a { color: var(--blue); text-decoration: none; }
-.footer a:hover { text-decoration: underline; }
+.footer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.footer-header:hover { color: var(--text-primary); }
+.footer-toggle { font-size: 10px; }
+.footer-log {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--transition);
+}
+.footer.expanded .footer-log { max-height: 160px; overflow-y: auto; }
+.footer-log-inner { padding: 0 20px 10px; }
+.log-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 0;
+  display: flex;
+  gap: 12px;
+}
+.log-line .log-time { color: var(--text-muted); min-width: 70px; }
+.log-line .log-method { font-weight: 600; min-width: 40px; }
+.log-line .log-method.get { color: var(--accent-blue); }
+.log-line .log-method.post { color: var(--accent-green); }
+.log-line .log-url { color: var(--text-secondary); flex: 1; }
+.log-line .log-status.ok { color: var(--accent-green); }
+.log-line .log-status.err { color: var(--accent-red); }
+.log-line .log-ms { color: var(--text-muted); min-width: 50px; text-align: right; }
 
-.legend {
-  position: absolute; bottom: 16px; left: 16px; z-index: 500;
-  background: rgba(22, 27, 34, 0.92); border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px 14px; font-size: 11px; font-family: var(--mono); color: var(--muted);
-  display: flex; flex-direction: column; gap: 6px;
+/* Leaflet overrides */
+.leaflet-container { background: var(--bg-primary) !important; }
+.leaflet-control-zoom a {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
 }
-.legend-row { display: flex; align-items: center; gap: 8px; }
-.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.legend-dot.you { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
-.legend-dot.lib { background: var(--cyan); }
+.leaflet-control-attribution { display: none !important; }
+
+/* Floor plan legend */
+.floor-legend {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  z-index: 55;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 11px;
+}
+.floor-legend.hidden { display: none; }
+.floor-legend h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; color: var(--text-secondary); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* Roaming panel */
+.roaming-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 55;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  width: 280px;
+  max-height: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+}
+.roaming-panel.hidden { display: none; }
+.roaming-panel h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.roaming-precision {
+  margin-bottom: 10px;
+}
+.roaming-precision label {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.roaming-precision label .precision-val {
+  font-family: var(--font-mono);
+  color: var(--accent-blue);
+  font-weight: 500;
+}
+.roaming-precision input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+}
+.roaming-precision input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  cursor: pointer;
+}
+.roaming-stats {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  line-height: 1.7;
+}
+.roaming-stats .stat-label { color: var(--text-muted); }
+.roaming-stats .stat-geohash { color: var(--accent-cyan); font-weight: 500; }
+.roaming-stats .stat-value { color: var(--accent-green); }
+.roaming-results-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.roaming-results {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 200px;
+}
+.roaming-results::-webkit-scrollbar { width: 5px; }
+.roaming-results::-webkit-scrollbar-track { background: transparent; }
+.roaming-results::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.roaming-result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.roaming-result-item:hover { background: var(--bg-card-hover); }
+.roaming-type-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.roaming-type-badge.store { background: rgba(240,136,62,0.15); color: var(--accent-orange); }
+.roaming-type-badge.department { background: rgba(57,210,192,0.15); color: var(--accent-cyan); }
+.roaming-type-badge.default { background: rgba(139,148,158,0.1); color: var(--text-secondary); }
+.roaming-result-name {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Floor stats panel (Scenes 3-5) — reuses roaming panel styles */
+.floor-stats-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 55;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  width: 280px;
+  max-height: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+}
+.floor-stats-panel.hidden { display: none; }
+.floor-stats-panel h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.floor-stats {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  line-height: 1.7;
+}
+.floor-stats .stat-label { color: var(--text-muted); }
+.floor-stats .stat-geohash { color: var(--accent-cyan); font-weight: 500; }
+.floor-stats .stat-value { color: var(--accent-green); }
+.floor-stats-results-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.floor-stats-results {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 200px;
+}
+.floor-stats-results::-webkit-scrollbar { width: 5px; }
+.floor-stats-results::-webkit-scrollbar-track { background: transparent; }
+.floor-stats-results::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.floor-stats-result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.floor-stats-result-item:hover { background: var(--bg-card-hover); }
+.floor-stats-type-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.floor-stats-type-badge.product { background: rgba(188,140,255,0.15); color: var(--accent-purple); }
+.floor-stats-type-badge.department { background: rgba(57,210,192,0.15); color: var(--accent-cyan); }
+.floor-stats-type-badge.store { background: rgba(240,136,62,0.15); color: var(--accent-orange); }
+.floor-stats-type-badge.default { background: rgba(139,148,158,0.1); color: var(--text-secondary); }
+.floor-stats-result-name {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.floor-stats-result-dist {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Product search (Scene 4) */
+.book-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  outline: none;
+  margin-bottom: 10px;
+  transition: var(--transition-fast);
+}
+.book-search-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(88,166,255,0.1); }
+.book-search-input::placeholder { color: var(--text-muted); }
+
+/* Coupon overlay panel (Scene 5) */
+.coupon-overlay {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  min-width: 420px;
+  max-width: 540px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.coupon-overlay.hidden { opacity: 0; transform: translateX(-50%) translateY(20px); pointer-events: none; }
+.coupon-overlay h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+.coupon-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.coupon-item:last-child { border-bottom: none; }
+.coupon-code-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(240,136,62,0.15);
+  border: 1px dashed var(--accent-orange);
+  color: var(--accent-orange);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+.coupon-info { flex: 1; min-width: 0; }
+.coupon-info .coupon-title { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.coupon-info .coupon-nearest { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.coupon-dist {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+}
+
+/* Draggable roaming marker */
+.leaflet-marker-icon.roaming-dot {
+  background: var(--accent-blue);
+  border: 3px solid #fff;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+  cursor: grab;
+}
+.leaflet-marker-icon.roaming-dot:active { cursor: grabbing; }
+.leaflet-marker-icon.roaming-result-dot {
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+}
+
+/* ---- Architecture Overview (Scene 0) ---- */
+.arch-overview {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 10;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+.arch-overview.hidden { display: none; }
+.arch-inner {
+  max-width: 700px;
+  width: 100%;
+  padding: 40px 24px;
+  text-align: center;
+}
+.arch-inner h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+.arch-inner .arch-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+.arch-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.arch-flow-node {
+  padding: 10px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.arch-flow-node .arch-flow-sub {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.arch-flow-arrow {
+  font-size: 18px;
+  color: var(--text-muted);
+  padding: 0 8px;
+}
+.arch-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.arch-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: left;
+}
+.arch-card h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.arch-card h3.ingest { color: var(--accent-green); }
+.arch-card h3.query { color: var(--accent-blue); }
+.arch-card h3.events { color: var(--accent-orange); }
+.arch-card p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.arch-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.arch-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-family: var(--font-mono);
+}
+.arch-start-btn {
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent-blue);
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.arch-start-btn:hover { background: #79b8ff; }
+
+/* ---- Scene Explainer Banners ---- */
+.scene-banner {
+  position: absolute;
+  top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 56;
+  background: rgba(251,244,227,0.95);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 36px 10px 20px;
+  max-width: 560px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(43,52,65,0.08);
+  pointer-events: auto;
+  transition: opacity 0.4s ease;
+}
+.scene-banner.hidden { opacity: 0; pointer-events: none; }
+.scene-banner-title { font-size: 14px; font-weight: 600; color: var(--accent-blue); font-family: var(--font-display); }
+.scene-banner-desc { font-size: 12px; color: var(--text-primary); margin: 4px 0; }
+.scene-banner-hint { font-size: 11px; color: var(--text-secondary); font-style: italic; }
+.scene-banner-close {
+  position: absolute; top: 6px; right: 10px;
+  cursor: pointer; color: var(--text-muted);
+  font-size: 16px; line-height: 1;
+  background: none; border: none;
+  font-family: var(--font-ui);
+}
+.scene-banner-close:hover { color: var(--text-primary); }
+.scene-banner-next {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  color: var(--accent-blue);
+  background: rgba(45,90,142,0.08);
+  border: 1px solid rgba(45,90,142,0.30);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.scene-banner-next:hover { background: rgba(45,90,142,0.16); }
+.scene-banner-next.hidden { display: none; }
+
+/* API Docs panel */
+.api-docs-panel {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 10;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+.api-docs-panel.hidden { display: none; }
+/* Redoc dark overrides — main content panel */
+.api-docs-panel .redoc-wrap { background: var(--bg-primary) !important; color: var(--text-primary) !important; }
+.api-docs-panel .api-content { background: var(--bg-primary) !important; }
+.api-docs-panel [class*="middle-panel"] { background: var(--bg-primary) !important; }
+.api-docs-panel table { background: transparent !important; }
+.api-docs-panel table td, .api-docs-panel table th { border-color: var(--border) !important; }
+.api-docs-panel h1, .api-docs-panel h2, .api-docs-panel h3, .api-docs-panel h4, .api-docs-panel h5 { color: var(--text-primary) !important; }
+.api-docs-panel p, .api-docs-panel li, .api-docs-panel span { color: inherit; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { width: 260px; min-width: 260px; }
+  .scene-tabs { display: none; }
+  .arch-cards { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .sidebar { display: none; }
+}
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <header class="header">
-  <div class="brand">
+  <div class="header-brand">
     <span class="dot"></span>
-    spin-geospatial-demo
-    <span class="brand-sub">US public libraries · Spin KV + geohash cell painting</span>
+    <span style="font-family:var(--font-display);">Step Inside</span>
+    <span style="margin-left:8px;font-weight:400;font-size:12px;color:var(--text-secondary);">from the globe down to the shelf</span>
+  </div>
+  <div class="scene-tabs">
+    <button class="scene-tab active" data-scene="0">Overview</button>
+    <button class="scene-tab" data-scene="1">Library Locator</button>
+    <button class="scene-tab" data-scene="2">Approach</button>
+    <button class="scene-tab" data-scene="3">Library Map</button>
+    <button class="scene-tab" data-scene="4">Browse Books</button>
+    <button class="scene-tab" data-scene="5">Reading Lists</button>
+    <button class="scene-tab" data-scene="6">API Docs</button>
   </div>
   <div class="header-right">
-    <a class="repo-link" href="https://github.com/ccie7599/spin-geospatial-demo" target="_blank" rel="noopener">
+    <a class="repo-link" href="https://github.com/ccie7599/spin-geospatial-demo" target="_blank" rel="noopener" title="Open-source reference implementation">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      View source
+      Source
     </a>
-    <span id="status">ready</span>
+    <div class="header-status" id="headerStatus">Ready</div>
   </div>
 </header>
 
-<div class="layout">
+<!-- MAIN -->
+<div class="main-layout">
 
-  <div class="map-panel">
-    <div id="map"></div>
-    <div class="legend">
-      <div class="legend-row"><span class="legend-dot you"></span> You (drag to move)</div>
-      <div class="legend-row"><span class="legend-dot lib"></span> Library (click for sections)</div>
-    </div>
-  </div>
-
-  <aside class="side">
-
-    <div class="side-section">
-      <h3>What you're seeing</h3>
-      <div class="intro">
-        Drag the <b>orange pin</b> anywhere on the map. The page calls
-        <code>GET /api/v1/checkin</code> on every drag and updates the live
-        response. When you're within ~35 m of a library, the service detects
-        the venue and, if you're within a section (~6 m), reports the zone
-        and surfaces the reading list for that section.
-        <div class="tip">Full 2,274 US public libraries loaded from OpenStreetMap.</div>
-      </div>
-    </div>
-
-    <div class="side-section">
-      <h3>Current check-in</h3>
-      <div class="status">
-        <div class="status-box">
-          <div class="status-label">in_venue</div>
-          <div class="status-value" id="inStore">—</div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <h3>Journey</h3>
+      <div class="journey-steps">
+        <div class="journey-step active" data-scene="0">
+          <div class="step-indicator">&#x2B21;</div>
+          <span>Overview</span>
         </div>
-        <div class="status-box">
-          <div class="status-label">zone</div>
-          <div class="status-value" id="zone">—</div>
+        <div class="journey-step" data-scene="1">
+          <div class="step-indicator">1</div>
+          <span>Library Locator</span>
         </div>
-        <div class="status-box" style="grid-column: 1 / 3;">
-          <div class="status-label">venue</div>
-          <div class="status-value" id="venueName" style="font-size: 12px;">—</div>
+        <div class="journey-step" data-scene="2">
+          <div class="step-indicator">2</div>
+          <span>Approaching Store</span>
         </div>
-        <div class="status-box" style="grid-column: 1 / 3;">
-          <div class="status-label">nearest</div>
-          <div class="status-value" id="nearest" style="font-size: 12px;">—</div>
+        <div class="journey-step" data-scene="3">
+          <div class="step-indicator">3</div>
+          <span>Library Map</span>
+        </div>
+        <div class="journey-step" data-scene="4">
+          <div class="step-indicator">4</div>
+          <span>Browse Books</span>
+        </div>
+        <div class="journey-step" data-scene="5">
+          <div class="step-indicator">5</div>
+          <span>Reading Lists</span>
         </div>
       </div>
     </div>
-
-    <div class="side-section">
-      <h3>Reading list for this section</h3>
-      <div class="reading" id="reading">
-        <div class="reading-empty">Stand inside a section to see its reading list.</div>
-      </div>
+    <div class="api-viewer">
+      <h3>API Calls</h3>
+      <div class="api-response-list" id="apiList"></div>
     </div>
-
-    <div class="api-calls" id="calls">
-      <h3 style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 10px;">Recent API calls</h3>
-    </div>
-
-    <div class="footer">
-      Source · <a href="https://github.com/ccie7599/spin-geospatial-demo" target="_blank" rel="noopener">ccie7599/spin-geospatial-demo</a>
-    </div>
-
   </aside>
 
+  <!-- VIEWPORT -->
+  <div class="viewport">
+    <div id="map"></div>
+    <canvas id="floorplan" class="hidden"></canvas>
+
+    <!-- Architecture Overview (Scene 0) -->
+    <div id="archOverview" class="arch-overview hidden">
+      <div class="arch-inner">
+        <h1>Step Inside</h1>
+        <div class="arch-tagline" style="font-family:var(--font-display);font-style:italic;color:var(--accent-orange);font-size:16px;margin-top:-4px;margin-bottom:10px;">From the globe down to the shelf.</div>
+        <div class="arch-subtitle">Edge-native venue proximity on Akamai Functions (Fermyon Spin). Libraries, retail, stadiums — anywhere visitors cross a threshold.</div>
+        <div class="arch-flow">
+          <div class="arch-flow-node">Mobile App<span class="arch-flow-sub">lat/lon checkins</span></div>
+          <span class="arch-flow-arrow">&rarr;</span>
+          <div class="arch-flow-node" style="border-color:var(--accent-blue)">Akamai Edge<span class="arch-flow-sub">global PoPs</span></div>
+          <span class="arch-flow-arrow">&rarr;</span>
+          <div class="arch-flow-node" style="border-color:var(--accent-green)">Spin WASM<span class="arch-flow-sub">~440KB binary</span></div>
+          <span class="arch-flow-arrow">&rarr;</span>
+          <div class="arch-flow-node" style="border-color:var(--accent-cyan)">Spin KV<span class="arch-flow-sub">edge-local state</span></div>
+        </div>
+        <div class="arch-cards">
+          <div class="arch-card">
+            <h3 class="ingest">Ingest</h3>
+            <p>Cell painting with upward write amplification. Objects painted at native precision + coarser levels for prefix-free KV reads.</p>
+          </div>
+          <div class="arch-card">
+            <h3 class="query">Query</h3>
+            <p>Direct KV reads per cell, dedup-on-read via HashSet, zero prefix wildcards. O(1) lookups at any precision.</p>
+          </div>
+          <div class="arch-card">
+            <h3 class="events">Events</h3>
+            <p>Stateful enter/exit/dwell detection with 3-ping hysteresis. Server-side geofencing &mdash; no client SDK needed.</p>
+          </div>
+        </div>
+        <div class="arch-badges">
+          <span class="arch-badge">Rust</span>
+          <span class="arch-badge">WASM</span>
+          <span class="arch-badge">Spin KV</span>
+          <span class="arch-badge">Geohash</span>
+          <span class="arch-badge">Zero External Deps</span>
+        </div>
+        <button class="arch-start-btn" onclick="setScene(1)">Start Demo &rarr;</button>
+      </div>
+    </div>
+
+    <!-- Scene explainer banner -->
+    <div id="sceneBanner" class="scene-banner hidden">
+      <button class="scene-banner-close" onclick="dismissBanner()">&times;</button>
+      <div class="scene-banner-title" id="bannerTitle"></div>
+      <div class="scene-banner-desc" id="bannerDesc"></div>
+      <div class="scene-banner-hint" id="bannerHint"></div>
+      <button class="scene-banner-next hidden" id="bannerNext"></button>
+    </div>
+
+    <!-- Store card overlay (Scene 1) -->
+    <div class="overlay-card store-card hidden" id="storeCard">
+      <h4 id="storeCardName"></h4>
+      <div class="address" id="storeCardAddress"></div>
+      <div class="distance" id="storeCardDistance"></div>
+      <div class="departments-list" id="storeCardDepts"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="btnApproach">Simulate Approach</button>
+        <button class="btn btn-secondary" id="btnDismissStore">Close</button>
+      </div>
+    </div>
+
+    <!-- Floor stats panel (Scenes 3-5) -->
+    <div class="floor-stats-panel hidden" id="floorStatsPanel">
+      <h4>Spatial Query <span style="font-size:10px;font-weight:400;color:var(--text-muted)">precision 10</span></h4>
+      <div class="floor-stats" id="floorStatsBlock">
+        <span class="stat-label">Geohash:</span> <span class="stat-geohash" id="fsGeohash">--</span><br>
+        <span class="stat-label">Precision:</span> <span class="stat-value" id="fsPrecision">10</span><br>
+        <span class="stat-label">Objects found:</span> <span class="stat-value" id="fsObjects">--</span><br>
+        <span class="stat-label">Duplicates eliminated:</span> <span class="stat-value" id="fsDupes">--</span><br>
+        <span class="stat-label">Cells queried:</span> <span class="stat-value" id="fsCells">--</span>
+      </div>
+      <div id="productSearchWrap" style="display:none;">
+        <input type="text" class="book-search-input" id="productSearchInput" placeholder="Find a book..." autocomplete="off">
+      </div>
+      <div class="floor-stats-results-header">Nearby</div>
+      <div class="floor-stats-results" id="floorStatsResults"></div>
+    </div>
+
+    <!-- Coupon overlay panel (Scene 5) -->
+    <div class="coupon-overlay hidden" id="couponOverlay">
+      <h4>Your Reading List</h4>
+      <div id="couponList"></div>
+    </div>
+
+    <!-- API Docs panel (Scene 6) -->
+    <div id="apiDocsPanel" class="api-docs-panel hidden"></div>
+
+    <!-- Floor legend -->
+    <div class="floor-legend hidden" id="floorLegend">
+      <h4>Legend</h4>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-blue);box-shadow:0 0 6px var(--accent-blue)"></div> You</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#6b8e7a"></div> Fiction</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8e96a8"></div> Dewey 000–900</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d79b5a"></div> Children's</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7ca7b8"></div> Community / AV / Reading</div>
+      <div class="legend-item legend-products hidden" id="legendBooks"><div class="legend-dot" style="background:var(--accent-purple);width:6px;height:6px"></div> Books</div>
+    </div>
+
+    <!-- Roaming panel (Scene 1) -->
+    <div class="roaming-panel hidden" id="roamingPanel">
+      <h4>Spatial Query</h4>
+      <div class="roaming-precision">
+        <label>
+          Radius
+          <span class="precision-val" id="roamingPrecisionLabel">4 (~12mi)</span>
+        </label>
+        <input type="range" id="roamingPrecisionSlider" min="3" max="5" value="4">
+      </div>
+      <div class="roaming-stats" id="roamingStats">
+        <span class="stat-label">Geohash:</span> <span class="stat-geohash" id="rsGeohash">--</span><br>
+        <span class="stat-label">Objects:</span> <span class="stat-value" id="rsObjects">--</span><br>
+        <span class="stat-label">Duplicates eliminated:</span> <span class="stat-value" id="rsDupes">--</span><br>
+        <span class="stat-label">Cells queried:</span> <span class="stat-value" id="rsCells">--</span>
+      </div>
+      <div class="roaming-results-header">Results</div>
+      <div class="roaming-results" id="roamingResults"></div>
+    </div>
+
+    <!-- Event toast -->
+    <div class="event-toast" id="eventToast"></div>
+
+    <!-- Sim controls (Scene 2) -->
+    <div class="sim-controls hidden" id="simControls">
+      <button class="btn btn-secondary btn-sm" id="btnPause">Pause</button>
+      <button class="btn btn-secondary btn-sm" id="btnSkip">Skip to Store</button>
+    </div>
+  </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const DEVICE_ID = 'demo-' + Math.random().toString(36).slice(2, 8);
-const status = document.getElementById('status');
-const callsEl = document.getElementById('calls');
+<!-- FOOTER -->
+<footer class="footer" id="footer">
+  <div class="footer-header" id="footerToggle">
+    <span>API Call Log (<span id="logCount">0</span> calls)</span>
+    <span class="footer-toggle">&#9650;</span>
+  </div>
+  <div class="footer-log">
+    <div class="footer-log-inner" id="footerLog"></div>
+  </div>
+</footer>
 
-// Map init — default to NYC
-const DEFAULT = [40.7531, -73.9822];
-const map = L.map('map', { zoomControl: true }).setView(DEFAULT, 13);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap &copy; CARTO',
-  subdomains: 'abcd', maxZoom: 19,
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+<script type="application/json" id="openapi-spec">
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Step Inside API",
+    "description": "Spatial intelligence API running on Akamai Functions (Fermyon Spin). Provides geohash-based spatial indexing with cell painting, upward write amplification, and server-side geofence event detection.\n\n**Architecture:** Rust \u2192 WASM (wasm32-wasip1) \u2192 Spin KV. Zero external geospatial dependencies \u2014 all algorithms implemented from scratch.\n\n**Key Concepts:**\n- **Cell Painting:** Objects are painted across all geohash cells their footprint intersects\n- **Upward Write Amplification:** Objects painted at native precision + coarser levels for prefix-free KV reads\n- **Dedup-on-Read:** Collect refs from queried cells \u2192 HashSet \u2192 hydrate unique objects",
+    "version": "0.3.0",
+    "contact": { "name": "Brian Apley", "email": "bapley@akamai.com" }
+  },
+  "servers": [
+    { "url": "https://locator.connected-cloud.io", "description": "Akamai Edge (production)" },
+    { "url": "http://localhost:3000", "description": "Local development" }
+  ],
+  "tags": [
+    { "name": "Health", "description": "Service status and metadata" },
+    { "name": "Ingest", "description": "Spatial object ingestion with cell painting" },
+    { "name": "Query", "description": "Raw spatial queries at any precision" },
+    { "name": "Customer API", "description": "Mobile app endpoints for in-store experience" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Returns service status, version, architecture details, KV key schema, and available endpoints.",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "service": { "type": "string", "example": "geospatial-edge-poc" },
+                    "version": { "type": "string", "example": "0.3.0" },
+                    "architecture": {
+                      "type": "object",
+                      "properties": {
+                        "compute": { "type": "string", "example": "Fermyon Spin (Akamai Functions)" },
+                        "storage": { "type": "string", "example": "Spin KV (key-value, edge-local)" },
+                        "spatialIndex": { "type": "string", "example": "Geohash cell painting with upward write amplification" },
+                        "eventDetection": { "type": "string", "example": "Stateful enter/exit/dwell with 3-ping hysteresis" }
+                      }
+                    },
+                    "keySchema": {
+                      "type": "object",
+                      "properties": {
+                        "spatialIndex": { "type": "string", "example": "spatial:{precision}:{geohash}" },
+                        "objectStore": { "type": "string", "example": "obj:{type}:{id}" },
+                        "deviceState": { "type": "string", "example": "dev:{device_id}" }
+                      }
+                    },
+                    "endpoints": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ingest/object": {
+      "post": {
+        "tags": ["Ingest"],
+        "summary": "Ingest a spatial object",
+        "description": "Paint any object (store, department, product, etc.) across geohash cells with upward write amplification. The object is stored at its native precision and painted upward to coarser levels for prefix-free KV reads at any query precision.",
+        "operationId": "ingestObject",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id", "type", "lat", "lon"],
+                "properties": {
+                  "id": { "type": "string", "description": "Unique object identifier", "example": "p1" },
+                  "type": { "type": "string", "description": "Object type (store, department, product, etc.)", "example": "product" },
+                  "lat": { "type": "number", "format": "double", "description": "Latitude", "example": 33.6846 },
+                  "lon": { "type": "number", "format": "double", "description": "Longitude", "example": -117.8265 },
+                  "radius": { "type": "number", "format": "double", "description": "Object footprint radius in meters / ~164ft (default: 50m)", "example": 2 },
+                  "precision": { "type": "integer", "description": "Override geohash precision (auto-computed from radius if omitted)", "minimum": 1, "maximum": 12 },
+                  "metadata": { "type": "object", "additionalProperties": true, "description": "Free-form key-value metadata", "example": { "name": "James", "author": "Percival Everett", "category": "fiction", "callNumber": "FIC EVERETT" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Object ingested and painted to cells",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "objectRef": { "type": "string", "description": "Object reference key (type:id)", "example": "product:p1" },
+                    "centerGeohash": { "type": "string", "example": "9q5ctr6x" },
+                    "precision": { "type": "integer", "example": 10 },
+                    "cellSize": { "type": "string", "example": "~1m" },
+                    "cellsPainted": { "type": "integer", "description": "Total cells written (native + upward)", "example": 24 },
+                    "cells": { "type": "array", "items": { "type": "string" }, "description": "List of painted cell hashes" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/ingest/store": {
+      "post": {
+        "tags": ["Ingest"],
+        "summary": "Ingest a store with departments",
+        "description": "Ingest a complete store and its departments as separate spatial objects. Each object is painted to geohash cells with upward write amplification. Department-to-store mappings are stored for wayfinding queries.",
+        "operationId": "ingestStore",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["storeId", "lat", "lon"],
+                "properties": {
+                  "storeId": { "type": "string", "example": "nypl-mid-manhattan" },
+                  "name": { "type": "string", "example": "Mid-Manhattan Library" },
+                  "lat": { "type": "number", "format": "double", "example": 33.6846 },
+                  "lon": { "type": "number", "format": "double", "example": -117.8265 },
+                  "radius": { "type": "number", "format": "double", "description": "Store footprint radius in meters / ~246ft (default: 75m)", "example": 75 },
+                  "address": { "type": "string", "example": "455 5th Ave, New York, NY 10016" },
+                  "departments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["name", "lat", "lon"],
+                      "properties": {
+                        "name": { "type": "string", "example": "fiction" },
+                        "lat": { "type": "number", "format": "double", "example": 33.68455 },
+                        "lon": { "type": "number", "format": "double", "example": -117.82660 },
+                        "radius": { "type": "number", "format": "double", "description": "Department radius in meters / ~33ft (default: 10m)", "example": 10 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Store and departments ingested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "storeId": { "type": "string", "example": "nypl-mid-manhattan" },
+                    "totalObjectsPainted": { "type": "integer", "example": 4 },
+                    "totalCellsWritten": { "type": "integer", "example": 96 },
+                    "details": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/PaintResult" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/ingest/location": {
+      "post": {
+        "tags": ["Ingest"],
+        "summary": "Device location check-in",
+        "description": "Record a device location update. Detects spatial context (which store, which department), fires stateful enter/exit/dwell events using 3-ping hysteresis, and persists device state to KV.",
+        "operationId": "ingestLocation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["deviceId", "lat", "lon"],
+                "properties": {
+                  "deviceId": { "type": "string", "example": "demo-device-abc123" },
+                  "lat": { "type": "number", "format": "double", "example": 33.6846 },
+                  "lon": { "type": "number", "format": "double", "example": -117.8265 },
+                  "accuracy": { "type": "number", "format": "double", "description": "GPS accuracy in meters / feet", "example": 5.0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Location processed with context and events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deviceId": { "type": "string" },
+                    "geohash": { "type": "string", "description": "10-char geohash of input coordinates" },
+                    "context": {
+                      "type": "object",
+                      "properties": {
+                        "storeId": { "type": "string", "nullable": true },
+                        "department": { "type": "string", "nullable": true },
+                        "objectsNearby": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": { "type": "string" },
+                              "id": { "type": "string" },
+                              "name": { "type": "string" },
+                              "distance": { "type": "number", "nullable": true }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "events": {
+                      "type": "array",
+                      "nullable": true,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": { "type": "string", "enum": ["device.entered_store", "device.exited_store", "device.entered_department"] },
+                          "storeId": { "type": "string" },
+                          "department": { "type": "string", "nullable": true },
+                          "previousDepartment": { "type": "string", "nullable": true },
+                          "dwellSeconds": { "type": "integer", "nullable": true },
+                          "timestamp": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    },
+                    "state": { "$ref": "#/components/schemas/DeviceState" },
+                    "debug": {
+                      "type": "object",
+                      "properties": {
+                        "uniqueObjectsFound": { "type": "integer" },
+                        "duplicatesEliminated": { "type": "integer" },
+                        "cellsQueried": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/query/point/{lat}/{lon}/{precision}": {
+      "get": {
+        "tags": ["Query"],
+        "summary": "Point query",
+        "description": "Raw spatial query at a geographic point. Returns all objects found within the geohash cell at the specified precision, plus its 8 neighbor cells. Results are deduplicated via HashSet.",
+        "operationId": "queryPoint",
+        "parameters": [
+          { "name": "lat", "in": "path", "required": true, "schema": { "type": "number", "format": "double" }, "example": 33.6846 },
+          { "name": "lon", "in": "path", "required": true, "schema": { "type": "number", "format": "double" }, "example": -117.8265 },
+          { "name": "precision", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 12 }, "description": "Geohash precision level. 1 = 3100mi, 5 = 3mi, 7 = 500ft, 8 = 125ft, 9 = 16ft, 10 = 3ft", "example": 9 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Spatial query results",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/QueryResult" } } }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/query/area/{geohash}": {
+      "get": {
+        "tags": ["Query"],
+        "summary": "Area query",
+        "description": "Query all objects within a geohash cell and its 8 neighbors. The precision is inferred from the geohash string length. Results are deduplicated.",
+        "operationId": "queryArea",
+        "parameters": [
+          { "name": "geohash", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Geohash string (length determines precision)", "example": "9q5ct" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Area query results",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/QueryResult" } } }
+          },
+          "400": {
+            "description": "Invalid geohash",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/query/store/{storeId}": {
+      "get": {
+        "tags": ["Query"],
+        "summary": "Store lookup",
+        "description": "Look up a single store by its ID. Returns the full SpatialObject with metadata, geohash, and paint details.",
+        "operationId": "queryStore",
+        "parameters": [
+          { "name": "storeId", "in": "path", "required": true, "schema": { "type": "string" }, "example": "nypl-mid-manhattan" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Store found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SpatialObject" } } }
+          },
+          "404": {
+            "description": "Store not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/checkin": {
+      "get": {
+        "tags": ["Customer API"],
+        "summary": "Customer check-in",
+        "description": "In-store mode trigger for mobile apps. Detects whether the device is inside a store, returns store metadata and departments, fires enter/exit events, and provides the nearest store if outside all stores.",
+        "operationId": "checkin",
+        "parameters": [
+          { "name": "lat", "in": "query", "required": true, "schema": { "type": "number", "format": "double" }, "example": 33.6846 },
+          { "name": "lon", "in": "query", "required": true, "schema": { "type": "number", "format": "double" }, "example": -117.8265 },
+          { "name": "deviceId", "in": "query", "required": true, "schema": { "type": "string" }, "example": "demo-device-abc123" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Check-in result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "inStore": { "type": "boolean" },
+                    "store": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "storeId": { "type": "string" },
+                        "name": { "type": "string" },
+                        "address": { "type": "string", "nullable": true },
+                        "departments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "slug": { "type": "string" }
+                            }
+                          }
+                        },
+                        "promosEndpoint": { "type": "string" }
+                      }
+                    },
+                    "zone": { "type": "string", "nullable": true },
+                    "event": { "type": "string", "nullable": true },
+                    "nearestStore": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "storeId": { "type": "string" },
+                        "name": { "type": "string" },
+                        "distance": { "type": "number", "description": "Distance in meters (see distanceText for human-readable mi/ft)" },
+                        "distanceText": { "type": "string", "example": "1.2 mi" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required parameters",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/stores/{storeId}/find": {
+      "get": {
+        "tags": ["Customer API"],
+        "summary": "Wayfinding search",
+        "description": "Search for departments within a store by name. Returns matching departments with floor plan coordinates and distances for wayfinding UX.",
+        "operationId": "findInStore",
+        "parameters": [
+          { "name": "storeId", "in": "path", "required": true, "schema": { "type": "string" }, "example": "nypl-mid-manhattan" },
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Search query (matches department names)", "example": "fiction" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "storeId": { "type": "string" },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": { "type": "string", "example": "department" },
+                          "name": { "type": "string" },
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "floorPlan": {
+                                "type": "object",
+                                "properties": {
+                                  "x": { "type": "number", "description": "Normalized [0,1]" },
+                                  "y": { "type": "number", "description": "Normalized [0,1]" }
+                                }
+                              },
+                              "distance": { "type": "number", "nullable": true, "description": "Distance in meters (see distanceText for human-readable mi/ft)" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing q parameter", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Store not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/v1/stores/{storeId}/position": {
+      "get": {
+        "tags": ["Customer API"],
+        "summary": "Blue dot positioning",
+        "description": "Returns the user's position on the store floor plan, current zone (department), and nearby departments with distances. Powers the blue dot overlay in mobile apps.",
+        "operationId": "getPosition",
+        "parameters": [
+          { "name": "storeId", "in": "path", "required": true, "schema": { "type": "string" }, "example": "nypl-mid-manhattan" },
+          { "name": "lat", "in": "query", "required": true, "schema": { "type": "number", "format": "double" }, "example": 33.68455 },
+          { "name": "lon", "in": "query", "required": true, "schema": { "type": "number", "format": "double" }, "example": -117.82660 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Position result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "type": "object",
+                      "properties": {
+                        "floorPlan": {
+                          "type": "object",
+                          "properties": {
+                            "x": { "type": "number" },
+                            "y": { "type": "number" }
+                          }
+                        },
+                        "accuracy": { "type": "integer", "example": 8 }
+                      }
+                    },
+                    "zone": {
+                      "type": "object",
+                      "properties": {
+                        "department": { "type": "string", "nullable": true }
+                      }
+                    },
+                    "nearby": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": { "type": "string", "example": "department" },
+                          "name": { "type": "string" },
+                          "distance": { "type": "number", "description": "Distance in meters (see distanceText for mi/ft)" },
+                          "distanceText": { "type": "string", "example": "~12ft" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing lat/lon", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Store not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/v1/stores/{storeId}/context": {
+      "get": {
+        "tags": ["Customer API"],
+        "summary": "Contextual content",
+        "description": "Returns zone-based contextual content and nearby departments. The hero promo is determined by the user's current department (e.g., fiction zone returns a fiction reading list). Used to power contextual in-store content delivery.",
+        "operationId": "getContext",
+        "parameters": [
+          { "name": "storeId", "in": "path", "required": true, "schema": { "type": "string" }, "example": "nypl-mid-manhattan" },
+          { "name": "lat", "in": "query", "required": true, "schema": { "type": "number", "format": "double" }, "example": 33.68455 },
+          { "name": "lon", "in": "query", "required": true, "schema": { "type": "number", "format": "double" }, "example": -117.82660 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contextual content for the user's current location",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "zone": { "type": "string", "nullable": true, "description": "Current department name" },
+                    "content": {
+                      "type": "object",
+                      "properties": {
+                        "hero": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "title": { "type": "string", "example": "Fiction staff picks: new this month" },
+                            "couponCode": { "type": "string", "nullable": true, "example": "READ-FIC-STAFF" }
+                          }
+                        },
+                        "departmentsNearby": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "slug": { "type": "string" },
+                              "floorPlan": {
+                                "type": "object",
+                                "properties": {
+                                  "x": { "type": "number" },
+                                  "y": { "type": "number" }
+                                }
+                              },
+                              "distance": { "type": "number" },
+                              "distanceText": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing lat/lon", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Store not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Missing required field: lat" }
+        }
+      },
+      "PaintResult": {
+        "type": "object",
+        "properties": {
+          "objectRef": { "type": "string", "example": "store:nypl-mid-manhattan" },
+          "centerGeohash": { "type": "string", "example": "9q5ctr6x" },
+          "precision": { "type": "integer", "example": 8 },
+          "cellSize": { "type": "string", "example": "~38m" },
+          "cellsPainted": { "type": "integer", "example": 24 },
+          "cells": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "SpatialObject": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "example": "store" },
+          "id": { "type": "string", "example": "nypl-mid-manhattan" },
+          "lat": { "type": "number", "format": "double" },
+          "lon": { "type": "number", "format": "double" },
+          "radius": { "type": "number", "format": "double" },
+          "geohash": { "type": "string", "description": "Full-precision geohash" },
+          "precision": { "type": "integer" },
+          "cellsPainted": { "type": "integer" },
+          "metadata": { "type": "object", "additionalProperties": true },
+          "ingestedAt": { "type": "string", "format": "date-time" },
+          "distanceMi": { "type": "number", "nullable": true, "description": "Distance from query point in miles (only in query results)" }
+        }
+      },
+      "QueryResult": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number", "nullable": true },
+              "lon": { "type": "number", "nullable": true },
+              "geohash": { "type": "string", "nullable": true },
+              "maxPrecision": { "type": "integer", "nullable": true },
+              "minPrecision": { "type": "integer", "nullable": true },
+              "precision": { "type": "integer", "nullable": true },
+              "cellSize": { "type": "string", "nullable": true },
+              "includeNeighbors": { "type": "boolean", "nullable": true }
+            }
+          },
+          "uniqueObjectIds": { "type": "integer", "description": "Count of unique objects after deduplication" },
+          "duplicatesEliminated": { "type": "integer", "description": "Number of duplicate refs removed" },
+          "objects": { "type": "array", "items": { "$ref": "#/components/schemas/SpatialObject" } },
+          "cellsQueried": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "precision": { "type": "integer", "nullable": true },
+                "cell": { "type": "string" },
+                "direction": { "type": "string", "nullable": true, "description": "Neighbor direction (N, NE, E, SE, S, SW, W, NW)" },
+                "refs": { "type": "integer", "description": "Object reference count in this cell" }
+              }
+            }
+          }
+        }
+      },
+      "DeviceState": {
+        "type": "object",
+        "properties": {
+          "deviceId": { "type": "string" },
+          "storeId": { "type": "string", "nullable": true },
+          "department": { "type": "string", "nullable": true },
+          "lastSeen": { "type": "string", "format": "date-time" },
+          "consecutiveOutside": { "type": "integer", "description": "Hysteresis counter for exit detection" },
+          "enteredAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      }
+    }
+  }
+}
+</script>
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const BASE = window.location.origin;
+const DEVICE_ID = 'demo-device-' + Math.random().toString(36).slice(2, 8);
+
+// Demo library — a default starter for scenes that need a concrete venue.
+// Gets replaced dynamically once the user picks a library from the locator.
+const DEMO_STORE = {
+  id: 'default',
+  name: 'Your local library',
+  lat: 40.7531,
+  lon: -73.9822,
+  address: 'Midtown Manhattan — drag the pin to pick a library',
+  departments: [],   // populated from /context once a library is selected
+};
+
+// Section category colors (legacy name retained for drawFloorplan compat)
+const PRODUCT_COLORS = {
+  'stacks':     '#8e96a8',
+  'fiction':    '#6b8e7a',
+  'childrens':  '#d79b5a',
+  'desk':       '#c17d4a',
+  'reading':    '#d0a060',
+  'room':       '#7ca7b8',
+  'media':      '#9e7ab0',
+};
+
+// Library books — placed at each section's center within the floor plan.
+// Mirrors the reading-list content served by /api/v1/stores/:id/context.
+// Each book gets a floorX/floorY derived from its DEPT_ZONE's center.
+const BOOK_LISTS = {
+  'dewey-000': [
+    { title: 'Code',                      author: 'Charles Petzold',         call: '005 PET' },
+    { title: 'The Pragmatic Programmer',  author: 'Hunt & Thomas',           call: '005.1 HUN' },
+    { title: 'How to Read a Book',        author: 'Mortimer Adler',          call: '028.9 ADL' },
+  ],
+  'dewey-100': [
+    { title: 'Thinking, Fast and Slow',   author: 'Daniel Kahneman',         call: '153.42 KAH' },
+    { title: "Man's Search for Meaning",  author: 'Viktor Frankl',           call: '150.195 FRA' },
+    { title: 'Meditations',               author: 'Marcus Aurelius',         call: '188 AUR' },
+  ],
+  'dewey-200': [
+    { title: "The World's Religions",     author: 'Huston Smith',            call: '200 SMI' },
+    { title: 'Tao Te Ching',              author: 'Lao Tzu',                 call: '299.5 LAO' },
+    { title: 'The Bhagavad Gita',         author: 'Various',                 call: '294.5924 BHA' },
+  ],
+  'dewey-300': [
+    { title: 'Caste',                     author: 'Isabel Wilkerson',        call: '305.5 WIL' },
+    { title: 'Evicted',                   author: 'Matthew Desmond',         call: '363.5 DES' },
+    { title: 'The New Jim Crow',          author: 'Michelle Alexander',      call: '364.973 ALE' },
+  ],
+  'dewey-400': [
+    { title: 'Because Internet',          author: 'Gretchen McCulloch',      call: '417.2 MCC' },
+    { title: 'The Elements of Style',     author: 'Strunk & White',          call: '428.2 STR' },
+    { title: 'The Mother Tongue',         author: 'Bill Bryson',             call: '420.9 BRY' },
+  ],
+  'dewey-500': [
+    { title: 'A Brief History of Time',   author: 'Stephen Hawking',         call: '523.1 HAW' },
+    { title: 'The Gene',                  author: 'Siddhartha Mukherjee',    call: '576.5 MUK' },
+    { title: 'Humble Pi',                 author: 'Matt Parker',             call: '510 PAR' },
+  ],
+  'dewey-600': [
+    { title: 'Salt, Fat, Acid, Heat',     author: 'Samin Nosrat',            call: '641.5 NOS' },
+    { title: 'The Body',                  author: 'Bill Bryson',             call: '612 BRY' },
+    { title: 'Climate Disaster',          author: 'Bill Gates',              call: '628.5 GAT' },
+  ],
+  'dewey-700': [
+    { title: 'The Story of Art',          author: 'E. H. Gombrich',          call: '709 GOM' },
+    { title: 'Your Brain on Music',       author: 'Daniel Levitin',          call: '781.11 LEV' },
+    { title: 'Ways of Seeing',            author: 'John Berger',             call: '701 BER' },
+  ],
+  'dewey-800': [
+    { title: 'Milk and Honey',            author: 'Rupi Kaur',               call: '811.6 KAU' },
+    { title: 'Citizen',                   author: 'Claudia Rankine',         call: '811.6 RAN' },
+    { title: 'The Paris Review',          author: 'Various',                 call: '808 PAR' },
+  ],
+  'dewey-900': [
+    { title: 'Sapiens',                   author: 'Yuval Noah Harari',       call: '909 HAR' },
+    { title: '1776',                      author: 'David McCullough',        call: '973.3 MCC' },
+    { title: 'Prisoners of Geography',    author: 'Tim Marshall',            call: '910 MAR' },
+  ],
+  'fiction': [
+    { title: 'James',                     author: 'Percival Everett',        call: 'FIC EVERETT' },
+    { title: 'Intermezzo',                author: 'Sally Rooney',            call: 'FIC ROONEY' },
+    { title: 'Orbital',                   author: 'Samantha Harvey',         call: 'FIC HARVEY' },
+  ],
+  'reference': [
+    { title: 'Chicago Manual of Style',   author: 'Univ. of Chicago Press',  call: 'REF 808.02 CHI' },
+    { title: "Merriam-Webster's Dict.",   author: 'Merriam-Webster',         call: 'REF 423 MER' },
+    { title: 'Statistical Abstract',      author: 'U.S. Census Bureau',      call: 'REF 317.3 STA' },
+  ],
+  'periodicals': [
+    { title: 'The New Yorker',            author: 'Weekly magazine',         call: 'PER' },
+    { title: 'National Geographic',       author: 'Monthly magazine',        call: 'PER' },
+    { title: 'Scientific American',       author: 'Monthly magazine',        call: 'PER' },
+  ],
+  'audiovisual': [
+    { title: 'Demon Copperhead',          author: 'Barbara Kingsolver (CD)', call: 'AV CD KINGSOLVER' },
+    { title: 'The Civil War (DVD)',       author: 'Ken Burns',               call: 'AV DVD 973.7 BUR' },
+    { title: 'Oppenheimer (DVD)',         author: 'Christopher Nolan',       call: 'AV DVD OPPENHEIMER' },
+  ],
+  'children': [
+    { title: 'Where the Wild Things Are', author: 'Maurice Sendak',          call: 'Y SENDAK' },
+    { title: 'Hungry Caterpillar',        author: 'Eric Carle',              call: 'Y CARLE' },
+    { title: 'Goodnight Moon',            author: 'Margaret Wise Brown',     call: 'Y BROWN' },
+  ],
+  'community': [
+    { title: 'Demon Copperhead',          author: 'Barbara Kingsolver',      call: 'FIC KINGSOLVER' },
+    { title: 'Warmth of Other Suns',      author: 'Isabel Wilkerson',        call: '305.896 WIL' },
+    { title: 'Braiding Sweetgrass',       author: 'Robin Wall Kimmerer',     call: '581.63 KIM' },
+  ],
+};
+
+// Library zones. Positions are (x, y) floor-plan coords in [0,1]²
+// (0,0)=SW, (1,1)=NE. Shapes are rectangles (w, h). Category drives render
+// style (stacks show parallel shelf rows, rooms show enclosed outline, etc.).
+// Positions align with load-libraries.sh SECTIONS (80m x 80m venue).
+const DEPT_ZONES = [
+  { name: 'dewey-000', label: '000', subtitle: 'Computers & Reference', color: '#8e96a8', x: 0.025, y: 0.770, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-100', label: '100', subtitle: 'Philosophy',            color: '#8e96a8', x: 0.025, y: 0.720, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-200', label: '200', subtitle: 'Religion',              color: '#8e96a8', x: 0.025, y: 0.670, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-300', label: '300', subtitle: 'Social Sciences',       color: '#8e96a8', x: 0.025, y: 0.620, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-400', label: '400', subtitle: 'Language',              color: '#8e96a8', x: 0.025, y: 0.570, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-500', label: '500', subtitle: 'Pure Science',          color: '#8e96a8', x: 0.025, y: 0.520, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-600', label: '600', subtitle: 'Applied Science',       color: '#8e96a8', x: 0.025, y: 0.470, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-700', label: '700', subtitle: 'Arts & Recreation',     color: '#8e96a8', x: 0.025, y: 0.420, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-800', label: '800', subtitle: 'Literature',            color: '#8e96a8', x: 0.025, y: 0.370, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'dewey-900', label: '900', subtitle: 'History & Geography',   color: '#8e96a8', x: 0.025, y: 0.320, w: 0.40, h: 0.045, category: 'stacks' },
+  { name: 'fiction',    label: 'FIC', subtitle: 'Adult Fiction',        color: '#6b8e7a', x: 0.09,  y: 0.21,  w: 0.32, h: 0.08,  category: 'stacks' },
+  { name: 'reference',  label: 'REF', subtitle: 'Reference Desk',       color: '#c17d4a', x: 0.04,  y: 0.08,  w: 0.12, h: 0.08,  category: 'desk' },
+  { name: 'periodicals',label: 'PER', subtitle: 'Periodicals & News',   color: '#d0a060', x: 0.34,  y: 0.08,  w: 0.16, h: 0.08,  category: 'reading' },
+  { name: 'children',   label: "KIDS", subtitle: "Children's Library",  color: '#d79b5a', x: 0.55,  y: 0.32,  w: 0.42, h: 0.58,  category: 'childrens' },
+  { name: 'audiovisual',label: 'AV',  subtitle: 'DVD, Audio & Video',   color: '#9e7ab0', x: 0.55,  y: 0.22,  w: 0.22, h: 0.08,  category: 'stacks' },
+  { name: 'community',  label: 'COM', subtitle: 'Community Room',       color: '#7ca7b8', x: 0.55,  y: 0.08,  w: 0.42, h: 0.10,  category: 'room' },
+];
+
+// Decorative amenity markers (no backend interaction)
+const AMENITIES = [
+  { type: 'entrance',  label: 'MAIN ENTRANCE',     x: 0.50, y: 0.005, w: 0.10, h: 0.015 },
+  { type: 'circdesk',  label: 'Circulation Desk',  x: 0.41, y: 0.175, w: 0.12, h: 0.025 },
+  { type: 'computers', label: 'Computer Stations', x: 0.68, y: 0.255, icon: '🖥' },
+];
+
+// Flatten books into MOCK_PRODUCTS-shaped array so existing rendering code works.
+const MOCK_PRODUCTS = [];
+// Deterministic PRNG so book positions are stable per page load
+function _seedRnd(seed) {
+  let s = 0;
+  for (let i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 2 ** 32; };
+}
+// Item-type label per section (drives the badge color + text)
+const SECTION_ITEM_TYPE = {
+  'audiovisual': { label: 'AV',      bg: 'rgba(158,122,176,0.18)', fg: '#8e6b8e' },
+  'periodicals': { label: 'MAG',     bg: 'rgba(208,160,96,0.18)',  fg: '#a87030' },
+  'reference':   { label: 'REF',     bg: 'rgba(193,125,74,0.18)',  fg: '#c17d4a' },
+  'community':   { label: 'PICK',    bg: 'rgba(124,167,184,0.18)', fg: '#4a8b9e' },
+  'children':    { label: 'KIDS',    bg: 'rgba(215,155,90,0.18)',  fg: '#c17d4a' },
+};
+function itemTypeFor(section) {
+  return SECTION_ITEM_TYPE[section] || { label: 'BOOK', bg: 'rgba(93,124,84,0.15)', fg: '#5c7c54' };
+}
+DEPT_ZONES.forEach(zone => {
+  const books = BOOK_LISTS[zone.name] || [];
+  const rnd = _seedRnd(zone.name);
+  // Margin from zone edges (in floor-plan fraction)
+  const mx = Math.min(zone.w * 0.15, 0.02);
+  const my = Math.min(zone.h * 0.30, 0.015);
+  books.forEach((b, i) => {
+    const fx = zone.x + mx + rnd() * (zone.w - 2 * mx);
+    const fy = zone.y + my + rnd() * (zone.h - 2 * my);
+    MOCK_PRODUCTS.push({
+      id: `${zone.name}-${i}`,
+      name: b.title,
+      author: b.author,
+      category: zone.name,
+      aisle: b.call,
+      price: 0,
+      floorX: fx,
+      floorY: fy,
+    });
+  });
+});
+
+// Compute lat/lon for each book
+MOCK_PRODUCTS.forEach(p => {
+  p.lat = DEMO_STORE.lat + (p.floorY - 0.5) * 0.0007;
+  p.lon = DEMO_STORE.lon + (p.floorX - 0.5) * 0.0007;
+});
+
+// Featured reading lists (one per themed section)
+const MOCK_COUPONS = [
+  { code: 'READ-FIC-STAFF',  title: 'Fiction staff picks',          category: 'fiction' },
+  { code: 'READ-Y-PICTURE',  title: 'Kids picture-book picks',      category: 'children' },
+  { code: 'READ-600',        title: '600 — Technology reads',       category: 'dewey-600' },
+];
+
+let state = {
+  scene: 0,
+  selectedStore: null,
+  simRunning: false,
+  simPaused: false,
+  apiCallCount: 0,
+  floorDotPos: { x: 0.5, y: 0.1 }, // start near entrance
+  highlightDept: null,
+  isDragging: false,
+  roaming: true,
+  roamingPrecision: 4,
+  visibleBooks: [],
+  selectedProduct: null,
+  couponBooks: [],
+  productsIngested: false,
+};
+
+// ============================================================
+// LEAFLET MAP
+// ============================================================
+const map = L.map('map', {
+  center: [39.8, -98.5],
+  zoom: 4,
+  zoomControl: true,
+});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  maxZoom: 19,
+  subdomains: 'abcd',
 }).addTo(map);
 
-// "You" marker — draggable
-const youIcon = L.divIcon({
-  className: 'you-icon',
-  html: '<div style="width:16px;height:16px;border-radius:50%;background:#f0883e;box-shadow:0 0 10px #f0883e;border:2px solid #fff;"></div>',
-  iconSize: [16, 16], iconAnchor: [8, 8],
-});
-const you = L.marker(DEFAULT, { icon: youIcon, draggable: true }).addTo(map);
+const storeMarkers = [];
+let userMarker = null;
 
-// Library markers, loaded lazily on map moveend
-const libIcon = L.divIcon({
-  className: 'lib-icon',
-  html: '<div style="width:10px;height:10px;border-radius:50%;background:#39d2c0;border:1px solid #0d1117;"></div>',
-  iconSize: [10, 10], iconAnchor: [5, 5],
-});
-const libMarkers = new Map();
-
-async function loadLibrariesInView() {
-  if (map.getZoom() < 11) {
-    libMarkers.forEach(m => map.removeLayer(m));
-    libMarkers.clear();
-    return;
-  }
-  const c = map.getCenter();
-  const geohash = '';
-  // Query at precision 5 for broad view, filter to viewport
-  const resp = await apiCall(`/query/point/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}/5`, 'preview');
-  if (!resp || !resp.objects) return;
-  const bounds = map.getBounds();
-  const seen = new Set();
-  for (const o of resp.objects) {
-    if (o.type !== 'store') continue;
-    if (!bounds.contains([o.lat, o.lon])) continue;
-    seen.add(o.id);
-    if (libMarkers.has(o.id)) continue;
-    const m = L.marker([o.lat, o.lon], { icon: libIcon, title: o.metadata?.name || o.id });
-    m.bindPopup(`<b>${o.metadata?.name || o.id}</b><br><small>${o.metadata?.address || ''}</small>`);
-    m.addTo(map);
-    libMarkers.set(o.id, m);
-  }
-  // Prune markers not in the current set
-  libMarkers.forEach((m, id) => {
-    if (!seen.has(id)) { map.removeLayer(m); libMarkers.delete(id); }
+function createDotIcon(cls, size) {
+  return L.divIcon({
+    className: 'leaflet-marker-icon ' + cls,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
   });
 }
 
-async function apiCall(path, tag = '') {
-  const started = performance.now();
-  status.textContent = 'loading…';
-  let ok = false, body = null;
+// ============================================================
+// API HELPER
+// ============================================================
+async function apiCall(method, path, body) {
+  const t0 = performance.now();
+  const opts = { method };
+  if (body) {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  }
+  let resp, data, ok = false;
   try {
-    const r = await fetch(path);
-    body = await r.json();
-    ok = r.ok;
+    resp = await fetch(BASE + path, opts);
+    data = await resp.json();
+    ok = resp.ok;
   } catch (e) {
-    body = { error: e.message };
+    data = { error: e.message };
   }
-  const ms = Math.round(performance.now() - started);
-  status.textContent = `ready · ${ms} ms`;
-  if (tag !== 'preview') logCall(path, ms, ok, body);
-  return body;
+  const ms = Math.round(performance.now() - t0);
+  state.apiCallCount++;
+  logApiCall(method, path, ok ? resp.status : 0, ms, data);
+  return data;
 }
 
-function logCall(path, ms, ok, body) {
-  const el = document.createElement('div');
-  el.className = 'call open';
-  el.innerHTML = `
-    <div class="call-head">
-      <div class="meth"><span class="badge get">GET</span><span class="path">${path}</span></div>
-      <span class="ms" style="color:${ok ? 'var(--green)' : 'var(--orange)'}">${ms} ms</span>
+function logApiCall(method, path, status, ms, data) {
+  // Sidebar entry
+  const list = document.getElementById('apiList');
+  const entry = document.createElement('div');
+  entry.className = 'api-entry';
+  const mCls = method.toLowerCase();
+  const sCls = (status >= 200 && status < 400) ? 'ok' : 'err';
+  entry.innerHTML = `
+    <div class="api-entry-header">
+      <span class="api-method ${mCls}">${method}</span>
+      <span class="api-path">${path}</span>
+      <span class="api-status ${sCls}">${status || 'ERR'}</span>
+      <span class="api-time">${ms}ms</span>
     </div>
-    <pre class="call-body">${JSON.stringify(body, null, 2)}</pre>
-  `;
-  el.querySelector('.call-head').addEventListener('click', () => el.classList.toggle('open'));
-  const sentinel = callsEl.children[0].nextSibling;
-  callsEl.insertBefore(el, sentinel);
-  while (callsEl.querySelectorAll('.call').length > 6) {
-    callsEl.querySelectorAll('.call')[callsEl.querySelectorAll('.call').length - 1].remove();
+    <div class="api-body">${JSON.stringify(data, null, 2)}</div>`;
+  entry.querySelector('.api-entry-header').onclick = () => entry.classList.toggle('expanded');
+  list.prepend(entry);
+
+  // Footer log line
+  const log = document.getElementById('footerLog');
+  const now = new Date();
+  const time = now.toTimeString().slice(0, 8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `
+    <span class="log-time">${time}</span>
+    <span class="log-method ${mCls}">${method}</span>
+    <span class="log-url">${path}</span>
+    <span class="log-status ${sCls}">${status || 'ERR'}</span>
+    <span class="log-ms">${ms}ms</span>`;
+  log.prepend(line);
+  document.getElementById('logCount').textContent = state.apiCallCount;
+}
+
+// ============================================================
+// SCENE BANNERS
+// ============================================================
+const SCENE_BANNERS = {
+  1: { title: 'Library Locator', desc: 'Geohash spatial query across 2,274 real US public libraries (OpenStreetMap). Adjust precision to see how cell painting covers different areas.', hint: 'Drag the pin to explore. Click a library to continue.' },
+  2: { title: 'Approaching the Library', desc: 'Simulated walk toward the library. Each step fires a location checkin API with real-time geofence event detection.', hint: 'Watch the events, or click Skip.' },
+  3: { title: 'Library Map', desc: 'Section-level positioning using precision 9\u201310 geohashes. Same spatial engine, finer cells. Dewey Decimal shelves line the west wall; children\u2019s library is east.', hint: 'Drag the blue dot between sections.', next: { label: 'Next: Browse Books \u2192', scene: 4 } },
+  4: { title: 'Browse Books', desc: 'Spatial search for books on the shelves. Each title is an ingested object with floor-plan coordinates in its Dewey section.', hint: 'Type a title to search. Press space to show all books.', next: { label: 'Next: Reading Lists \u2192', scene: 5 } },
+  5: { title: 'Reading Lists', desc: 'Context-aware reading recommendations for the section you\u2019re standing in. Wayfinding paths rendered in real time.', hint: 'Drag the blue dot between shelves to see the list change.' },
+};
+
+function showBanner(n) {
+  const info = SCENE_BANNERS[n];
+  if (!info) return;
+  const el = document.getElementById('sceneBanner');
+  document.getElementById('bannerTitle').textContent = info.title;
+  document.getElementById('bannerDesc').textContent = info.desc;
+  document.getElementById('bannerHint').textContent = info.hint;
+  const nextBtn = document.getElementById('bannerNext');
+  if (info.next) {
+    nextBtn.textContent = info.next.label;
+    nextBtn.classList.remove('hidden');
+    nextBtn.onclick = () => setScene(info.next.scene);
+  } else {
+    nextBtn.classList.add('hidden');
+    nextBtn.onclick = null;
   }
+  el.classList.remove('hidden');
 }
 
-function updateStatus(result) {
-  document.getElementById('inStore').textContent = result.inStore ? 'true' : 'false';
-  document.getElementById('inStore').className = 'status-value ' + (result.inStore ? 'ok' : 'miss');
-  document.getElementById('zone').textContent = result.zone || '—';
-  document.getElementById('venueName').textContent =
-    result.store ? (result.store.name + (result.store.address ? ' · ' + result.store.address : '')) : '—';
-  document.getElementById('nearest').textContent =
-    result.nearestStore ? `${result.nearestStore.name} · ${result.nearestStore.distanceText}` : '—';
+function dismissBanner() {
+  document.getElementById('sceneBanner').classList.add('hidden');
 }
 
-function updateReading(ctx) {
-  const el = document.getElementById('reading');
-  const hero = ctx && ctx.content && ctx.content.hero;
-  if (!hero) {
-    el.innerHTML = '<div class="reading-empty">Stand inside a section to see its reading list.</div>';
+// ============================================================
+// SCENE MANAGEMENT
+// ============================================================
+function setScene(n) {
+  const prev = state.scene;
+  state.scene = n;
+
+  // Update tabs
+  document.querySelectorAll('.scene-tab').forEach(t => {
+    t.classList.toggle('active', +t.dataset.scene === n);
+  });
+  // Update journey steps
+  document.querySelectorAll('.journey-step').forEach(s => {
+    const sn = +s.dataset.scene;
+    s.classList.toggle('active', sn === n);
+    s.classList.toggle('completed', sn < n);
+  });
+
+  // Show/hide architecture overview
+  document.getElementById('archOverview').classList.toggle('hidden', n !== 0);
+
+  // Show/hide API docs panel
+  document.getElementById('apiDocsPanel').classList.toggle('hidden', n !== 6);
+  if (n === 6 && !window._redocInitialized) {
+    window._redocInitialized = true;
+    const spec = JSON.parse(document.getElementById('openapi-spec').textContent);
+    Redoc.init(spec, {
+      theme: {
+        colors: {
+          primary: { main: '#58a6ff' },
+          success: { main: '#3fb950' },
+          error: { main: '#f85149' },
+          warning: { main: '#f0883e' },
+          text: { primary: '#e6edf3', secondary: '#8b949e' },
+          border: { dark: '#30363d', light: '#21262d' },
+          http: {
+            get: '#58a6ff', post: '#3fb950', put: '#bc8cff',
+            patch: '#f0883e', delete: '#f85149', options: '#8b949e',
+          },
+        },
+        schema: {
+          typeNameColor: '#58a6ff',
+          linesColor: '#30363d',
+          nestedBackground: '#161b22',
+        },
+        typography: {
+          fontFamily: 'Inter, sans-serif',
+          headings: { fontFamily: 'Inter, sans-serif' },
+          code: {
+            fontFamily: 'JetBrains Mono, monospace',
+            backgroundColor: '#161b22',
+            color: '#e6edf3',
+          },
+          links: { color: '#58a6ff' },
+        },
+        sidebar: {
+          backgroundColor: '#161b22',
+          textColor: '#8b949e',
+          activeTextColor: '#e6edf3',
+          groupItems: { activeBackgroundColor: '#21262d', activeTextColor: '#e6edf3' },
+        },
+        rightPanel: {
+          backgroundColor: '#0d1117',
+          textColor: '#e6edf3',
+        },
+      },
+      hideDownloadButton: false,
+      scrollYOffset: 0,
+    }, document.getElementById('apiDocsPanel'));
+  }
+
+  // Show/hide map vs floor plan
+  const showMap = (n >= 1 && n <= 2);
+  document.getElementById('map').classList.toggle('hidden', !showMap);
+  document.getElementById('floorplan').classList.toggle('hidden', n < 3 || n === 6);
+  if (showMap) { setTimeout(() => map.invalidateSize(), 350); }
+
+  // Clean up roaming when leaving Scene 1
+  if (prev === 1 && n !== 1 && state.roaming) {
+    state.roaming = false;
+    cleanupRoamingLayers();
+  }
+
+  // Overlays (hide everything on scene 0 and 6)
+  document.getElementById('roamingPanel').classList.toggle('hidden', n !== 1);
+  document.getElementById('storeCard').classList.toggle('hidden', n !== 1 || !state.selectedStore);
+  document.getElementById('simControls').classList.toggle('hidden', n !== 2);
+  document.getElementById('floorStatsPanel').classList.toggle('hidden', n < 3 || n === 6);
+  document.getElementById('floorLegend').classList.toggle('hidden', n < 3 || n === 6);
+  document.getElementById('couponOverlay').classList.toggle('hidden', n !== 5);
+  document.getElementById('sceneBanner').classList.toggle('hidden', n === 0 || n === 6);
+
+  // Product search visible only in Scene 4
+  document.getElementById('productSearchWrap').style.display = (n === 4) ? '' : 'none';
+
+  // Legend: show product dots for scenes 4-5
+  const legendBooks = document.getElementById('legendBooks');
+  if (legendBooks) legendBooks.classList.toggle('hidden', n < 4);
+
+  // Clear product state on scene change
+  state.visibleBooks = [];
+  state.selectedProduct = null;
+  state.couponBooks = [];
+
+  document.getElementById('headerStatus').textContent = [
+    'Architecture', 'Library Locator', 'Approaching...', 'Library Map', 'Browse Books', 'Reading Lists', 'API Reference'
+  ][n];
+
+  // Scene banners (skip for scene 0 — the overview IS the explainer)
+  dismissBanner();
+  if (n >= 1) showBanner(n);
+
+  // Scene init
+  if (n === 1) initScene1();
+  if (n === 2) initScene2();
+  if (n === 3) initScene3();
+  if (n === 4) initScene4();
+  if (n === 5) initScene5();
+}
+
+// ============================================================
+// SCENE 1 — Library Locator
+// ============================================================
+// Default: NYC midtown (lots of libraries in the locator)
+const DEFAULT_LOCATION = { lat: 40.7531, lon: -73.9822 };
+
+async function initScene1() {
+  clearStoreMarkers();
+  if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+
+  // If roaming is already active (returning to scene 1), leave it alone
+  if (state.roaming && roamingMarker) return;
+
+  // Try user geolocation, fall back to default
+  getUserLocation((loc) => {
+    state.roaming = true;
+    map.setView([loc.lat, loc.lon], 10, { animate: true });
+    enableRoaming(loc.lat, loc.lon);
+  });
+}
+
+function getUserLocation(callback) {
+  if (!navigator.geolocation) {
+    showToast('Geolocation not available — using default', 'info');
+    callback(DEFAULT_LOCATION);
     return;
   }
-  const zone = ctx.zone || 'section';
-  const tag = hero.couponCode ? `<div class="reading-id">list id: ${hero.couponCode}</div>` : '';
-  el.innerHTML = `
-    <span class="reading-tag">${zone}</span>
-    <div class="reading-title">${hero.title}</div>
-    ${tag}
-  `;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      showToast('Using your location', 'enter');
+      callback({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+    },
+    (err) => {
+      const reasons = { 1: 'Permission denied', 2: 'Position unavailable', 3: 'Timed out' };
+      showToast(`Location ${reasons[err.code] || 'error'} — using default`, 'info');
+      callback(DEFAULT_LOCATION);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
+  );
 }
 
-async function checkin() {
-  const { lat, lng } = you.getLatLng();
-  const resp = await apiCall(`/api/v1/checkin?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}&deviceId=${DEVICE_ID}`);
-  if (resp) updateStatus(resp);
-  if (resp?.store?.storeId) {
-    // fetch context for the current zone and surface its reading list
-    const ctx = await apiCall(`/api/v1/stores/${resp.store.storeId}/context?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}`);
-    updateReading(ctx);
-  } else {
-    updateReading(null);
+function clearStoreMarkers() {
+  storeMarkers.forEach(m => map.removeLayer(m));
+  storeMarkers.length = 0;
+}
+
+// ============================================================
+// ROAMING MODE
+// ============================================================
+const PRECISION_LABELS = {
+  1: '~1550mi', 2: '~390mi', 3: '~48mi', 4: '~12mi', 5: '~1.5mi'
+};
+
+let roamingMarker = null;
+let roamingResultMarkers = [];
+let roamingCellRect = null;
+
+function decodeGeohash(hash) {
+  const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+  let latMin = -90, latMax = 90, lonMin = -180, lonMax = 180;
+  let isLon = true;
+  for (let i = 0; i < hash.length; i++) {
+    const idx = BASE32.indexOf(hash[i]);
+    if (idx === -1) break;
+    for (let bit = 4; bit >= 0; bit--) {
+      const mid = isLon ? (lonMin + lonMax) / 2 : (latMin + latMax) / 2;
+      if ((idx >> bit) & 1) {
+        if (isLon) lonMin = mid; else latMin = mid;
+      } else {
+        if (isLon) lonMax = mid; else latMax = mid;
+      }
+      isLon = !isLon;
+    }
+  }
+  return { latMin, latMax, lonMin, lonMax };
+}
+
+function enableRoaming(lat, lon) {
+  // Clean up any previous roaming state
+  cleanupRoamingLayers();
+  document.getElementById('storeCard').classList.add('hidden');
+  clearStoreMarkers();
+
+  // Place draggable marker
+  roamingMarker = L.marker([lat, lon], {
+    icon: createDotIcon('roaming-dot', 18),
+    draggable: true,
+  }).addTo(map);
+
+  roamingMarker.on('dragend', () => {
+    const pos = roamingMarker.getLatLng();
+    roamingQuery(pos.lat, pos.lng);
+  });
+
+  // Initial query
+  roamingQuery(lat, lon);
+}
+
+function cleanupRoamingLayers() {
+  if (roamingMarker) { map.removeLayer(roamingMarker); roamingMarker = null; }
+  roamingResultMarkers.forEach(m => map.removeLayer(m));
+  roamingResultMarkers = [];
+  if (roamingCellRect) { map.removeLayer(roamingCellRect); roamingCellRect = null; }
+}
+
+async function roamingQuery(lat, lon) {
+  const precision = state.roamingPrecision;
+  const data = await apiCall('GET', `/query/point/${lat.toFixed(6)}/${lon.toFixed(6)}/${precision}`);
+
+  // Update stats
+  const gh = data.query?.geohash || '--';
+  document.getElementById('rsGeohash').textContent = gh;
+  document.getElementById('rsObjects').textContent = data.uniqueObjectIds ?? (data.objects?.length ?? 0);
+  document.getElementById('rsDupes').textContent = data.duplicatesEliminated ?? 0;
+  document.getElementById('rsCells').textContent = data.cellsQueried?.length ?? 0;
+
+  // Clear old result markers
+  roamingResultMarkers.forEach(m => map.removeLayer(m));
+  roamingResultMarkers = [];
+
+  // Draw geohash cell bounding box
+  if (roamingCellRect) { map.removeLayer(roamingCellRect); roamingCellRect = null; }
+  if (gh && gh !== '--') {
+    const bounds = decodeGeohash(gh);
+    roamingCellRect = L.rectangle(
+      [[bounds.latMin, bounds.lonMin], [bounds.latMax, bounds.lonMax]],
+      { color: '#58a6ff', weight: 2, dashArray: '6 4', fillColor: '#58a6ff', fillOpacity: 0.08 }
+    ).addTo(map);
+  }
+
+  // Render result markers and list
+  const resultsEl = document.getElementById('roamingResults');
+  resultsEl.innerHTML = '';
+
+  if (data.objects && data.objects.length > 0) {
+    data.objects.forEach(obj => {
+      const isStore = obj.type === 'store';
+      const color = isStore ? '#f0883e' : '#39d2c0';
+      const name = obj.metadata?.name || obj.name || obj.id || 'Unknown';
+
+      // Map marker
+      if (obj.lat && obj.lon) {
+        const icon = L.divIcon({
+          className: 'leaflet-marker-icon roaming-result-dot',
+          iconSize: [10, 10],
+          iconAnchor: [5, 5],
+          html: `<div style="width:10px;height:10px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.5)"></div>`
+        });
+        const m = L.marker([obj.lat, obj.lon], { icon }).addTo(map);
+        m.on('click', () => {
+          if (isStore) selectStore(obj);
+        });
+        roamingResultMarkers.push(m);
+      }
+
+      // Results list item
+      const badgeCls = isStore ? 'store' : (obj.type === 'department' ? 'department' : 'default');
+      const item = document.createElement('div');
+      item.className = 'roaming-result-item';
+      const distLabel = obj.distanceMi != null ? `${obj.distanceMi}mi` : '';
+      item.innerHTML = `<span class="roaming-type-badge ${badgeCls}">${obj.type || '?'}</span><span class="roaming-result-name">${name}</span><span style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${distLabel}</span>`;
+      item.onclick = () => {
+        if (obj.lat && obj.lon) map.panTo([obj.lat, obj.lon], { animate: true });
+        if (isStore) selectStore(obj);
+      };
+      resultsEl.appendChild(item);
+    });
   }
 }
 
-let debounce;
-you.on('drag', () => {
-  clearTimeout(debounce);
-  debounce = setTimeout(checkin, 120);
-});
-map.on('moveend', loadLibrariesInView);
+function selectStore(s) {
+  state.selectedStore = s;
+  const card = document.getElementById('storeCard');
+  card.classList.remove('hidden');
+  document.getElementById('storeCardName').textContent = s.metadata?.name || s.name || s.id;
+  document.getElementById('storeCardAddress').textContent = s.metadata?.address || s.address || '';
 
-// Initial load
-(async () => {
-  await loadLibrariesInView();
-  await checkin();
+  // Compute distance from map center
+  const center = map.getCenter();
+  const dist = haversine(center.lat, center.lng, s.lat, s.lon);
+  document.getElementById('storeCardDistance').textContent = formatDist(dist);
+
+  // Library sections preview — show a representative sampling so the card
+  // stays compact (all 16 zones would wrap awkwardly).
+  const deptsEl = document.getElementById('storeCardDepts');
+  deptsEl.innerHTML = '';
+  const previewSections = [
+    { name: 'children',   label: "Children's" },
+    { name: 'fiction',    label: 'Fiction' },
+    { name: 'dewey-500',  label: '500 Science' },
+    { name: 'dewey-900',  label: '900 History' },
+    { name: 'reference',  label: 'Reference' },
+    { name: 'audiovisual',label: 'AV' },
+    { name: 'community',  label: 'Community' },
+    { name: 'more',       label: '+ 9 more' },
+  ];
+  previewSections.forEach(d => {
+    deptsEl.innerHTML += `<span class="dept-tag default">${d.label}</span>`;
+  });
+
+  map.flyTo([s.lat, s.lon], 14, { duration: 1.2 });
+}
+
+// ============================================================
+// SCENE 2 — Approaching Store
+// ============================================================
+let simInterval = null;
+
+function buildApproachPath(storeLat, storeLon) {
+  // Generate 9 waypoints approaching the store from ~2km south-southwest
+  const steps = [
+    { frac: 0.0, label: '2km away' },
+    { frac: 0.15, label: '1.5km away' },
+    { frac: 0.35, label: '800m away' },
+    { frac: 0.55, label: '400m away' },
+    { frac: 0.7, label: '200m away' },
+    { frac: 0.82, label: '100m away' },
+    { frac: 0.92, label: 'At entrance' },
+    { frac: 0.97, label: 'Entering store' },
+    { frac: 1.0, label: 'Inside store' },
+  ];
+  // Start ~2km south and slightly west
+  const startLat = storeLat - 0.016;
+  const startLon = storeLon + 0.006;
+  return steps.map(s => ({
+    lat: startLat + (storeLat - startLat) * s.frac,
+    lon: startLon + (storeLon - startLon) * s.frac,
+    label: s.label,
+  }));
+}
+
+async function initScene2() {
+  if (state.simRunning) return;
+  state.simRunning = true;
+  state.simPaused = false;
+
+  const store = state.selectedStore || DEMO_STORE;
+  const approachPath = buildApproachPath(store.lat, store.lon);
+  map.flyTo([store.lat, store.lon], 15, { duration: 1 });
+
+  // Place store marker
+  clearStoreMarkers();
+  const sm = L.marker([store.lat, store.lon], { icon: createDotIcon('store-dot', 14) }).addTo(map);
+  storeMarkers.push(sm);
+
+  if (userMarker) map.removeLayer(userMarker);
+  userMarker = L.marker([approachPath[0].lat, approachPath[0].lon], {
+    icon: createDotIcon('user-dot', 16)
+  }).addTo(map);
+
+  let step = 0;
+  simInterval = setInterval(async () => {
+    if (state.simPaused || state.scene !== 2) return;
+    if (step >= approachPath.length) {
+      clearInterval(simInterval);
+      state.simRunning = false;
+      showToast('Entered store! Switching to floor plan...', 'enter');
+      setTimeout(() => setScene(3), 1500);
+      return;
+    }
+
+    const pt = approachPath[step];
+    userMarker.setLatLng([pt.lat, pt.lon]);
+
+    if (step >= 4) {
+      map.panTo([pt.lat, pt.lon], { animate: true });
+    }
+    if (step === 4) map.flyTo([pt.lat, pt.lon], 17, { duration: 0.8 });
+
+    // Call checkin API
+    const data = await apiCall('GET',
+      `/api/v1/checkin?lat=${pt.lat}&lon=${pt.lon}&deviceId=${DEVICE_ID}`);
+
+    if (data.inStore) {
+      showToast('In-store detected: ' + (data.store?.name || store.name), 'enter');
+    } else if (data.nearestStore) {
+      showToast(`Nearest: ${data.nearestStore.name} (${data.nearestStore.distanceText})`, 'info');
+    }
+
+    step++;
+  }, 1800);
+}
+
+function skipToStore() {
+  if (simInterval) clearInterval(simInterval);
+  state.simRunning = false;
+  showToast('Entered store!', 'enter');
+  setTimeout(() => setScene(3), 800);
+}
+
+// ============================================================
+// SCENE 3 — Library Map (Floor Plan)
+// ============================================================
+let floorplanCtx = null;
+let floorplanW = 0, floorplanH = 0;
+let fpAnimFrame = null;
+
+function initScene3() {
+  state.highlightDept = null;
+  state.visibleBooks = [];
+  state.selectedProduct = null;
+  resizeFloorplan();
+  state.floorDotPos = { x: 0.5, y: 0.1 };
+  drawFloorplan();
+  updateFloorPosition(state.floorDotPos.x, state.floorDotPos.y);
+}
+
+function resizeFloorplan() {
+  const canvas = document.getElementById('floorplan');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  floorplanW = rect.width;
+  floorplanH = rect.height;
+  floorplanCtx = canvas.getContext('2d');
+  floorplanCtx.scale(devicePixelRatio, devicePixelRatio);
+}
+
+function drawFloorplan() {
+  const ctx = floorplanCtx;
+  if (!ctx) return;
+  const W = floorplanW, H = floorplanH;
+
+  // Clear
+  ctx.clearRect(0, 0, W, H);
+  // Library palette — warm cream background
+  ctx.fillStyle = '#f5eedd';
+  ctx.fillRect(0, 0, W, H);
+
+  // Building interior
+  const pad = 30;
+  const sW = W - pad * 2;
+  const sH = H - pad * 2;
+
+  // Inside building — slightly warmer cream
+  ctx.fillStyle = '#fbf4e3';
+  ctx.fillRect(pad, pad, sW, sH);
+
+  // Building walls
+  ctx.strokeStyle = '#3b4b5e';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(pad, pad, sW, sH);
+
+  // Entrance cut-out at south wall
+  const entranceW = Math.min(80, sW * 0.12);
+  const entranceX = pad + sW / 2 - entranceW / 2;
+  const entranceY = pad + sH - 1.5;
+  ctx.strokeStyle = '#fbf4e3';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(entranceX, entranceY);
+  ctx.lineTo(entranceX + entranceW, entranceY);
+  ctx.stroke();
+  // Door swing arcs
+  ctx.strokeStyle = '#99a6b8';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(entranceX, entranceY, entranceW / 2.2, Math.PI * 1.05, Math.PI * 1.5);
+  ctx.moveTo(entranceX + entranceW, entranceY);
+  ctx.arc(entranceX + entranceW, entranceY, entranceW / 2.2, Math.PI * 1.5, Math.PI * 1.95);
+  ctx.stroke();
+  // Entrance label (outside)
+  ctx.fillStyle = '#6b7589';
+  ctx.font = '600 11px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('MAIN ENTRANCE', pad + sW / 2, pad + sH + 18);
+
+  // Convert floor-plan (x,y) in [0,1]² to canvas pixels (y flipped: 0=south)
+  const fpToPx = (fx, fy) => [pad + fx * sW, pad + (1 - fy) * sH];
+
+  // Zones
+  DEPT_ZONES.forEach(z => {
+    const [zx, zy] = fpToPx(z.x, z.y + z.h);
+    const zw = z.w * sW;
+    const zh = z.h * sH;
+    const highlight = state.highlightDept === z.name;
+
+    // Fill
+    const baseAlpha = highlight ? 0.32 : 0.14;
+    ctx.fillStyle = hexToRgba(z.color, baseAlpha);
+    ctx.fillRect(zx, zy, zw, zh);
+
+    // Border
+    ctx.strokeStyle = highlight ? z.color : hexToRgba(z.color, 0.55);
+    ctx.lineWidth = highlight ? 2 : 1;
+    ctx.strokeRect(zx, zy, zw, zh);
+
+    // Render shelf rows for stack zones
+    if (z.category === 'stacks' && zh >= 18) {
+      const rows = z.name === 'fiction' ? 4 : 1;
+      const rowGap = zh / (rows + 1);
+      ctx.fillStyle = hexToRgba(z.color, 0.55);
+      for (let i = 1; i <= rows; i++) {
+        const ry = zy + rowGap * i - 3;
+        ctx.fillRect(zx + 4, ry, zw - 8, 6);
+      }
+    }
+
+    // Room feel: thicker outline
+    if (z.category === 'room') {
+      ctx.strokeStyle = hexToRgba(z.color, 0.85);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(zx + 2, zy + 2, zw - 4, zh - 4);
+    }
+
+    // Children's area: decorative rug + tree hint
+    if (z.category === 'childrens') {
+      // Reading rug (rounded rectangle)
+      const rugW = Math.min(70, zw * 0.35);
+      const rugH = Math.min(40, zh * 0.2);
+      const rx = zx + zw / 2 - rugW / 2;
+      const ry = zy + zh * 0.6 - rugH / 2;
+      ctx.fillStyle = hexToRgba('#6b8e7a', 0.22);
+      ctx.beginPath();
+      ctx.ellipse(rx + rugW / 2, ry + rugH / 2, rugW / 2, rugH / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Tree trunk
+      ctx.fillStyle = '#8b6b4a';
+      ctx.fillRect(zx + zw * 0.82, zy + zh * 0.15, 4, 14);
+      // Tree canopy
+      ctx.fillStyle = '#6b8e5a';
+      ctx.beginPath();
+      ctx.arc(zx + zw * 0.82 + 2, zy + zh * 0.12, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Reference / circulation desk: draw a small desk rectangle inside
+    if (z.category === 'desk') {
+      const dW = Math.min(zw * 0.6, 40);
+      const dH = 8;
+      ctx.fillStyle = hexToRgba(z.color, 0.9);
+      ctx.fillRect(zx + zw / 2 - dW / 2, zy + zh / 2 - dH / 2, dW, dH);
+    }
+
+    // Reading area: couple of chair dots
+    if (z.category === 'reading') {
+      ctx.fillStyle = hexToRgba(z.color, 0.6);
+      for (let i = 0; i < 4; i++) {
+        const cx = zx + zw * (0.22 + i * 0.19);
+        const cy = zy + zh / 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Labels — two lines: bold label + subtitle
+    const cx = zx + zw / 2;
+    const cy = zy + zh / 2;
+    const showSubtitle = zw >= 80 && zh >= 28;
+    ctx.textAlign = 'center';
+    if (zh >= 16) {
+      ctx.fillStyle = highlight ? '#1f2937' : '#3b4b5e';
+      ctx.font = (highlight ? '700 ' : '600 ') + (zh >= 40 ? '13px' : '11px') + ' Inter, sans-serif';
+      ctx.fillText(z.label, cx, cy + (showSubtitle ? -3 : 3));
+      if (showSubtitle) {
+        ctx.fillStyle = '#6b7589';
+        ctx.font = '500 10px Inter, sans-serif';
+        ctx.fillText(z.subtitle, cx, cy + 12);
+      }
+    } else {
+      // Narrow stack row: label on the left edge, subtitle on the right
+      ctx.textAlign = 'left';
+      ctx.fillStyle = highlight ? '#1f2937' : '#3b4b5e';
+      ctx.font = '700 10px "JetBrains Mono", monospace';
+      ctx.fillText(z.label, zx + 6, cy + 3);
+      ctx.fillStyle = '#6b7589';
+      ctx.font = '500 10px Inter, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(z.subtitle, zx + zw - 6, cy + 3);
+    }
+  });
+
+  // Decorative amenity markers
+  if (typeof AMENITIES !== 'undefined') {
+    AMENITIES.forEach(a => {
+      if (a.w && a.h) {
+        const [ax, ay] = fpToPx(a.x, a.y + a.h);
+        const aw = a.w * sW;
+        const ah = a.h * sH;
+        ctx.strokeStyle = '#99a6b8';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ax, ay, aw, ah);
+        ctx.fillStyle = '#6b7589';
+        ctx.font = '500 9px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(a.label, ax + aw / 2, ay + ah / 2 + 3);
+      } else if (a.icon) {
+        const [ax, ay] = fpToPx(a.x, a.y);
+        ctx.font = '14px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(a.icon, ax, ay);
+      }
+    });
+  }
+
+  // Product dots (Scenes 4-5)
+  if (state.scene >= 4 && state.visibleBooks.length > 0) {
+    state.visibleBooks.forEach(p => {
+      const px = pad + p.floorX * sW;
+      const py = pad + (1 - p.floorY) * sH;
+      const color = PRODUCT_COLORS[p.category] || '#bc8cff';
+      const isSelected = state.selectedProduct && state.selectedProduct.id === p.id;
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, isSelected ? 7 : 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (isSelected) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Name label
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, px, py - 14);
+        ctx.font = '500 10px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#8b949e';
+        ctx.fillText('Aisle ' + p.aisle + ' — $' + p.price.toFixed(2), px, py - 3);
+      }
+    });
+  }
+
+  // Coupon paths (Scene 5)
+  if (state.scene === 5 && state.couponBooks.length > 0) {
+    const dotPx = pad + state.floorDotPos.x * sW;
+    const dotPy = pad + (1 - state.floorDotPos.y) * sH;
+
+    state.couponBooks.forEach(cp => {
+      if (!cp.product) return;
+      const px = pad + cp.product.floorX * sW;
+      const py = pad + (1 - cp.product.floorY) * sH;
+      const color = PRODUCT_COLORS[cp.product.category] || '#bc8cff';
+
+      // Dashed path
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = hexToRgba(color, 0.6);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(dotPx, dotPy);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Product dot
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Distance label at midpoint
+      const mx = (dotPx + px) / 2;
+      const my = (dotPy + py) / 2;
+      ctx.font = '500 10px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      const label = `~${cp.distFt}ft`;
+      const tw = ctx.measureText(label).width + 8;
+      ctx.fillStyle = 'rgba(13,17,23,0.8)';
+      ctx.fillRect(mx - tw / 2, my - 8, tw, 16);
+      ctx.fillStyle = '#e6edf3';
+      ctx.fillText(label, mx, my + 3);
+    });
+  }
+
+  // Blue dot
+  const dotX = pad + state.floorDotPos.x * sW;
+  const dotY = pad + (1 - state.floorDotPos.y) * sH;
+
+  // Glow
+  const grad = ctx.createRadialGradient(dotX, dotY, 0, dotX, dotY, 20);
+  grad.addColorStop(0, 'rgba(88,166,255,0.4)');
+  grad.addColorStop(1, 'rgba(88,166,255,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Dot
+  ctx.fillStyle = '#58a6ff';
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Highlight path line to target department (Scene 3)
+  if (state.highlightDept && state.scene === 3) {
+    const zone = DEPT_ZONES.find(z => z.name === state.highlightDept);
+    if (zone) {
+      const tx = pad + (zone.x + zone.w / 2) * sW;
+      const ty = pad + (1 - zone.y - zone.h / 2) * sH;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = zone.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(dotX, dotY);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Target dot
+      ctx.fillStyle = zone.color;
+      ctx.beginPath();
+      ctx.arc(tx, ty, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Highlight path to selected product (Scene 4)
+  if (state.selectedProduct && state.scene === 4) {
+    const sp = state.selectedProduct;
+    const tx = pad + sp.floorX * sW;
+    const ty = pad + (1 - sp.floorY) * sH;
+    const color = PRODUCT_COLORS[sp.category] || '#bc8cff';
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(dotX, dotY);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Distance label at midpoint
+    const mx = (dotX + tx) / 2;
+    const my = (dotY + ty) / 2;
+    const dx = sp.floorX - state.floorDotPos.x;
+    const dy = sp.floorY - state.floorDotPos.y;
+    const distFt = Math.round(Math.sqrt(dx * dx + dy * dy) * 150);
+    ctx.font = '500 10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    const label = `~${distFt}ft`;
+    const tw = ctx.measureText(label).width + 8;
+    ctx.fillStyle = 'rgba(13,17,23,0.8)';
+    ctx.fillRect(mx - tw / 2, my - 8, tw, 16);
+    ctx.fillStyle = '#e6edf3';
+    ctx.fillText(label, mx, my + 3);
+  }
+}
+
+function canvasToFloorCoords(canvasX, canvasY) {
+  const pad = 60;
+  const sW = floorplanW - pad * 2;
+  const sH = floorplanH - pad * 2;
+  const fx = (canvasX - pad) / sW;
+  const fy = 1 - (canvasY - pad) / sH;
+  return { x: Math.max(0, Math.min(1, fx)), y: Math.max(0, Math.min(1, fy)) };
+}
+
+function floorToLatLon(fx, fy) {
+  const store = DEMO_STORE;
+  return {
+    lat: store.lat + (fy - 0.5) * 0.0003,
+    lon: store.lon + (fx - 0.5) * 0.0003,
+  };
+}
+
+async function updateFloorPosition(fx, fy) {
+  state.floorDotPos = { x: fx, y: fy };
+
+  // Convert floor coords to lat/lon
+  const { lat, lon } = floorToLatLon(fx, fy);
+
+  // Determine zone
+  let currentZone = null;
+  DEPT_ZONES.forEach(z => {
+    if (fx >= z.x && fx <= z.x + z.w && fy >= z.y && fy <= z.y + z.h) {
+      currentZone = z.name;
+    }
+  });
+
+  // Zone highlight for scene 3
+  if (state.scene === 3) {
+    state.highlightDept = currentZone;
+  }
+
+  // Spatial query at precision 10 for indoor
+  const data = await apiCall('GET', `/query/point/${lat.toFixed(6)}/${lon.toFixed(6)}/10`);
+
+  // Update floor stats panel
+  updateFloorStats(data, lat, lon);
+
+  // Scene-specific behavior
+  if (state.scene === 4) {
+    updateInventoryFromQuery(data);
+  }
+  if (state.scene === 5) {
+    updateCoupons(fx, fy);
+  }
+
+  drawFloorplan();
+}
+
+function updateFloorStats(data, lat, lon) {
+  const gh = data.query?.geohash || '--';
+  document.getElementById('fsGeohash').textContent = gh;
+  document.getElementById('fsPrecision').textContent = '10';
+  document.getElementById('fsObjects').textContent = data.uniqueObjectIds ?? (data.objects?.length ?? 0);
+  document.getElementById('fsDupes').textContent = data.duplicatesEliminated ?? 0;
+  document.getElementById('fsCells').textContent = data.cellsQueried?.length ?? 0;
+
+  // Render results list
+  const resultsEl = document.getElementById('floorStatsResults');
+  resultsEl.innerHTML = '';
+
+  if (data.objects && data.objects.length > 0) {
+    data.objects.forEach(obj => {
+      const type = obj.type || 'unknown';
+      const name = obj.metadata?.name || obj.name || obj.id || 'Unknown';
+      const dist = (obj.lat && obj.lon) ? haversine(lat, lon, obj.lat, obj.lon) : null;
+      const distLabel = dist !== null ? formatDistIndoor(dist) : '';
+      const badgeCls = type === 'product' ? 'product' : (type === 'department' ? 'department' : (type === 'store' ? 'store' : 'default'));
+
+      const item = document.createElement('div');
+      item.className = 'floor-stats-result-item';
+      item.innerHTML = `<span class="floor-stats-type-badge ${badgeCls}">${type}</span><span class="floor-stats-result-name">${name}</span><span class="floor-stats-result-dist">${distLabel}</span>`;
+
+      // Click to select product in scene 4
+      if (type === 'product' && state.scene === 4) {
+        item.style.cursor = 'pointer';
+        item.onclick = () => {
+          const product = MOCK_PRODUCTS.find(p => p.id === obj.id);
+          if (product) selectProduct(product);
+        };
+      }
+      resultsEl.appendChild(item);
+    });
+  }
+}
+
+function updateInventoryFromQuery(data) {
+  // Book Finder: show ALL books sorted by proximity to the user's dot.
+  // (Books are frontend-only constants; we don't rely on backend /query to
+  // find them because they're not ingested at every library.)
+  const searchInput = document.getElementById('productSearchInput');
+  if (searchInput && searchInput.value.trim()) return;
+  const d = state.floorDotPos;
+  const withDist = MOCK_PRODUCTS.map(p => {
+    const dx = p.floorX - d.x, dy = p.floorY - d.y;
+    return { ...p, _dist: Math.sqrt(dx*dx + dy*dy) };
+  });
+  withDist.sort((a, b) => a._dist - b._dist);
+  state.visibleBooks = withDist;
+  renderBookList(withDist);
+}
+
+function selectProduct(product) {
+  state.selectedProduct = product;
+  showToast(`${product.name} — ${product.aisle}`, 'info');
+  drawFloorplan();
+  renderBookList(state.visibleBooks);
+}
+
+function updateCoupons(fx, fy) {
+  state.couponBooks = MOCK_COUPONS.map(coupon => {
+    // Find nearest product matching coupon category
+    const matching = MOCK_PRODUCTS.filter(p => p.category === coupon.category);
+    let nearest = null;
+    let nearestDist = Infinity;
+    matching.forEach(p => {
+      const dx = p.floorX - fx;
+      const dy = p.floorY - fy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < nearestDist) { nearestDist = d; nearest = p; }
+    });
+
+    // Convert floor distance to approximate feet (~150ft store width)
+    const distFt = nearestDist * 150;
+    return { coupon, product: nearest, distFt: Math.round(distFt), floorDist: nearestDist };
+  });
+
+  // Update coupon overlay panel
+  const listEl = document.getElementById('couponList');
+  listEl.innerHTML = '';
+  state.couponBooks.forEach(cp => {
+    const item = document.createElement('div');
+    item.className = 'coupon-item';
+    item.innerHTML = `
+      <span class="coupon-code-badge">${cp.coupon.code}</span>
+      <div class="coupon-info">
+        <div class="coupon-title">${cp.coupon.title}</div>
+        <div class="coupon-nearest">${cp.product ? cp.product.name + ' · ' + cp.product.aisle : 'No nearby title'}</div>
+      </div>
+      <span class="coupon-dist">~${cp.distFt}ft</span>`;
+    listEl.appendChild(item);
+  });
+
+  // Proximity toast when close to a featured book
+  const close = state.couponBooks.find(cp => cp.distFt < 15);
+  if (close) {
+    showToast(`You're ~${close.distFt}ft from a staff pick!`, 'dept');
+  }
+}
+
+// ============================================================
+// SCENE 4 — Book Finder
+// ============================================================
+function initScene4() {
+  state.highlightDept = null;
+  state.selectedProduct = null;
+  state.visibleBooks = MOCK_PRODUCTS.slice();
+  resizeFloorplan();
+  drawFloorplan();
+  updateFloorPosition(state.floorDotPos.x, state.floorDotPos.y);
+  renderBookList(state.visibleBooks);
+  const input = document.getElementById('productSearchInput');
+  if (input) { input.value = ''; input.focus(); }
+}
+
+function renderBookList(books) {
+  const resultsEl = document.getElementById('floorStatsResults');
+  if (!resultsEl) return;
+  resultsEl.innerHTML = '';
+  if (!books || books.length === 0) {
+    resultsEl.innerHTML = '<div class="floor-stats-result-item" style="color:var(--text-muted);font-style:italic;">No titles match.</div>';
+    return;
+  }
+  books.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'floor-stats-result-item';
+    const selected = state.selectedProduct && state.selectedProduct.id === p.id;
+    const t = itemTypeFor(p.category);
+    item.innerHTML = `
+      <span class="floor-stats-type-badge" style="background:${t.bg};color:${t.fg};">${t.label}</span>
+      <span class="floor-stats-result-name">${p.name}${p.author ? `<br><small style="color:var(--text-muted);font-weight:400;">${p.author}</small>` : ''}</span>
+      <span class="floor-stats-result-dist" style="font-family:var(--font-mono);font-size:10px;">${p.aisle}</span>`;
+    item.style.cursor = 'pointer';
+    if (selected) item.style.background = 'rgba(45,90,142,0.12)';
+    item.onclick = () => selectProduct(p);
+    resultsEl.appendChild(item);
+  });
+}
+
+function doProductSearch(query) {
+  if (!query.trim()) {
+    state.visibleBooks = MOCK_PRODUCTS.slice();
+    state.selectedProduct = null;
+  } else {
+    const q = query.toLowerCase();
+    state.visibleBooks = MOCK_PRODUCTS.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.author || '').toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      p.aisle.toLowerCase().includes(q)
+    );
+    state.selectedProduct = null;
+  }
+  drawFloorplan();
+  renderBookList(state.visibleBooks);
+}
+
+// ============================================================
+// SCENE 5 — Coupons
+// ============================================================
+function initScene5() {
+  state.highlightDept = null;
+  state.selectedProduct = null;
+  state.visibleBooks = [];
+  resizeFloorplan();
+  // Place dot near fiction zone to show reading-list relevance
+  if (!isInAnyZone(state.floorDotPos)) {
+    state.floorDotPos = { x: 0.2, y: 0.65 };
+  }
+  drawFloorplan();
+  updateFloorPosition(state.floorDotPos.x, state.floorDotPos.y);
+}
+
+function isInAnyZone(pos) {
+  return DEPT_ZONES.some(z =>
+    pos.x >= z.x && pos.x <= z.x + z.w && pos.y >= z.y && pos.y <= z.y + z.h
+  );
+}
+
+// ============================================================
+// FLOOR PLAN INTERACTION — Click/Drag to move dot
+// ============================================================
+(function setupFloorInteraction() {
+  const canvas = document.getElementById('floorplan');
+
+  let dragStartPos = null;
+
+  canvas.addEventListener('mousedown', (e) => {
+    if (state.scene < 3) return;
+    state.isDragging = true;
+    dragStartPos = { x: e.clientX, y: e.clientY };
+    moveDotTo(e);
+  });
+  canvas.addEventListener('mousemove', (e) => {
+    if (!state.isDragging || state.scene < 3) return;
+    moveDotTo(e);
+  });
+  canvas.addEventListener('mouseup', (e) => {
+    if (state.isDragging && dragStartPos && state.scene === 4) {
+      const dx = e.clientX - dragStartPos.x;
+      const dy = e.clientY - dragStartPos.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 5) {
+        // Click, not drag — check for product hit
+        checkProductClick(e);
+      }
+    }
+    state.isDragging = false;
+    dragStartPos = null;
+  });
+  canvas.addEventListener('mouseleave', () => { state.isDragging = false; dragStartPos = null; });
+
+  // Touch support
+  canvas.addEventListener('touchstart', (e) => {
+    if (state.scene < 3) return;
+    e.preventDefault();
+    state.isDragging = true;
+    moveDotToTouch(e);
+  });
+  canvas.addEventListener('touchmove', (e) => {
+    if (!state.isDragging || state.scene < 3) return;
+    e.preventDefault();
+    moveDotToTouch(e);
+  });
+  canvas.addEventListener('touchend', () => { state.isDragging = false; });
+
+  function moveDotTo(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const fp = canvasToFloorCoords(cx, cy);
+    updateFloorPosition(fp.x, fp.y);
+  }
+  function moveDotToTouch(e) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const cx = touch.clientX - rect.left;
+    const cy = touch.clientY - rect.top;
+    const fp = canvasToFloorCoords(cx, cy);
+    updateFloorPosition(fp.x, fp.y);
+  }
+  function checkProductClick(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const pad = 60;
+    const sW = floorplanW - pad * 2;
+    const sH = floorplanH - pad * 2;
+
+    let closest = null;
+    let closestDist = 15; // 15px hit radius
+    state.visibleBooks.forEach(p => {
+      const px = pad + p.floorX * sW;
+      const py = pad + (1 - p.floorY) * sH;
+      const d = Math.sqrt((cx - px) ** 2 + (cy - py) ** 2);
+      if (d < closestDist) { closestDist = d; closest = p; }
+    });
+
+    if (closest) {
+      selectProduct(closest);
+    }
+  }
+})();
+
+// ============================================================
+// EVENT TOAST
+// ============================================================
+let toastTimer = null;
+function showToast(msg, type) {
+  const el = document.getElementById('eventToast');
+  el.textContent = msg;
+  el.className = 'event-toast visible ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('visible'); }, 3000);
+}
+
+// ============================================================
+// UTILITY
+// ============================================================
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDist(m) {
+  if (m < 1000) return Math.round(m) + 'm';
+  return (m / 1609.34).toFixed(1) + ' mi';
+}
+
+function formatDistIndoor(meters) {
+  const ft = meters * 3.28084;
+  return ft < 100 ? `~${Math.round(ft)}ft` : `${Math.round(meters)}m`;
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+
+// Scene tabs
+document.querySelectorAll('.scene-tab').forEach(t => {
+  t.addEventListener('click', () => setScene(+t.dataset.scene));
+});
+
+// Journey steps
+document.querySelectorAll('.journey-step').forEach(s => {
+  s.addEventListener('click', () => setScene(+s.dataset.scene));
+});
+
+// Store card buttons
+document.getElementById('btnApproach').addEventListener('click', () => setScene(2));
+document.getElementById('btnDismissStore').addEventListener('click', () => {
+  document.getElementById('storeCard').classList.add('hidden');
+});
+
+// Sim controls
+document.getElementById('btnPause').addEventListener('click', () => {
+  state.simPaused = !state.simPaused;
+  document.getElementById('btnPause').textContent = state.simPaused ? 'Resume' : 'Pause';
+});
+document.getElementById('btnSkip').addEventListener('click', skipToStore);
+
+// Footer toggle
+document.getElementById('footerToggle').addEventListener('click', () => {
+  document.getElementById('footer').classList.toggle('expanded');
+});
+
+// Product search (Scene 4)
+document.getElementById('productSearchInput').addEventListener('input', (e) => {
+  clearTimeout(window._searchDebounce);
+  window._searchDebounce = setTimeout(() => doProductSearch(e.target.value), 200);
+});
+
+// Roaming precision slider
+document.getElementById('roamingPrecisionSlider').addEventListener('input', (e) => {
+  const p = +e.target.value;
+  state.roamingPrecision = p;
+  document.getElementById('roamingPrecisionLabel').textContent = `${p} (${PRECISION_LABELS[p]})`;
+  if (state.roaming && roamingMarker) {
+    const pos = roamingMarker.getLatLng();
+    roamingQuery(pos.lat, pos.lng);
+  }
+});
+
+// Resize
+window.addEventListener('resize', () => {
+  if (state.scene >= 3) {
+    resizeFloorplan();
+    drawFloorplan();
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+(async function init() {
+  // Health check only — the 2,274+ libraries are pre-ingested via
+  // load-libraries.sh on the backend. Books in MOCK_PRODUCTS are
+  // frontend-only demo data; no ingest needed at page load.
+  await apiCall('GET', '/health');
+  setScene(0);
 })();
 </script>
 </body>

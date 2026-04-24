@@ -358,8 +358,11 @@ fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl IntoResp
 
     let store = open_store()?;
 
-    // High-precision query for in-store detection
-    let opts = QueryOpts { precision: 9, min_precision: 7, include_neighbors: true, radius_m: None };
+    // High-precision query for in-venue detection.
+    // radius_m bounds "inside" to a real-world distance: upward-amplified paint
+    // cells otherwise match at p7 (~153m) and falsely claim in-venue up to 150m
+    // away from the library center.
+    let opts = QueryOpts { precision: 9, min_precision: 7, include_neighbors: true, radius_m: Some(45.0) };
     let context = query_point(&store, lat, lon, &opts);
 
     let stores: Vec<&SpatialObject> = context.objects.iter()
@@ -599,51 +602,17 @@ fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoRespo
         .and_then(|o| o.metadata.get("department").and_then(|v| v.as_str()))
         .map(|s| s.to_string());
 
-    // Stub reading-list teaser based on current zone. In a real deployment this
-    // would come from a CMS keyed by (venue_id, zone) — the spatial layer only
-    // needs to tell the content layer *where* the visitor is. The HeroPromo
-    // struct is reused as-is: `title` names the list, `coupon_code` is the
-    // list identifier a client could dereference to fetch the full items.
-    let hero = current_dept.as_ref().map(|dept| {
-        match dept.as_str() {
-            "children" => HeroPromo {
-                title: "Kids' staff picks: picture books for ages 3–7".into(),
-                coupon_code: Some("READ-KIDS-PICTURE".into()),
-            },
-            "fiction" => HeroPromo {
-                title: "Fiction staff picks: new this month".into(),
-                coupon_code: Some("READ-FIC-STAFF".into()),
-            },
-            "nonfiction" => HeroPromo {
-                title: "Nonfiction staff picks".into(),
-                coupon_code: Some("READ-NF-STAFF".into()),
-            },
-            "reference" => HeroPromo {
-                title: "Research guides for common questions".into(),
-                coupon_code: Some("READ-REF-GUIDES".into()),
-            },
-            "periodicals" => HeroPromo {
-                title: "Featured magazines this week".into(),
-                coupon_code: Some("READ-MAG-FEATURED".into()),
-            },
-            "audiovisual" => HeroPromo {
-                title: "New audiobooks and DVDs".into(),
-                coupon_code: Some("READ-AV-NEW".into()),
-            },
-            "computers" => HeroPromo {
-                title: "Digital resources & online databases guide".into(),
-                coupon_code: Some("READ-DIGITAL".into()),
-            },
-            "community" => HeroPromo {
-                title: "Community book club: this month's pick".into(),
-                coupon_code: Some("READ-COMMUNITY-BC".into()),
-            },
-            _ => HeroPromo {
-                title: format!("Reading list for the {dept} section"),
-                coupon_code: None,
-            },
+    // Reading-list teaser + sample titles based on the current Dewey section.
+    // In a real deployment this would come from a CMS or the library's
+    // catalog API, keyed by (venue_id, zone); the spatial layer only needs
+    // to tell the content layer *where* the visitor is.
+    let (hero, reading_list): (Option<HeroPromo>, Vec<Book>) = match current_dept.as_ref() {
+        Some(dept) => {
+            let (h, books) = content_for_section(dept.as_str());
+            (Some(h), books)
         }
-    });
+        None => (None, Vec::new()),
+    };
 
     // Departments nearby with distances and floor plan coords
     let departments = get_store_departments(&store, store_id);
@@ -670,9 +639,153 @@ fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoRespo
         zone: current_dept,
         content: ContextContent {
             hero,
+            reading_list,
             departments_nearby: dept_contexts,
         },
     }))
+}
+
+// Demo content. Dewey Decimal classes 000–900 plus the usual non-Dewey library
+// zones (children, fiction, reference, periodicals, audiovisual, community).
+// Titles chosen to be broadly findable in most US public libraries.
+fn content_for_section(dept: &str) -> (HeroPromo, Vec<Book>) {
+    let book = |t: &str, a: &str, c: &str| Book {
+        title: t.into(), author: a.into(), call_number: c.into(),
+    };
+    match dept {
+        "children" => (
+            HeroPromo { title: "Kids' staff picks — picture books for ages 3–7".into(), coupon_code: Some("READ-Y-PICTURE".into()) },
+            vec![
+                book("Where the Wild Things Are", "Maurice Sendak",      "Y SENDAK"),
+                book("The Very Hungry Caterpillar", "Eric Carle",         "Y CARLE"),
+                book("Goodnight Moon",              "Margaret Wise Brown", "Y BROWN"),
+            ],
+        ),
+        "fiction" => (
+            HeroPromo { title: "Fiction staff picks — new this month".into(), coupon_code: Some("READ-FIC-STAFF".into()) },
+            vec![
+                book("James",      "Percival Everett", "FIC EVERETT"),
+                book("Intermezzo", "Sally Rooney",     "FIC ROONEY"),
+                book("Orbital",    "Samantha Harvey",  "FIC HARVEY"),
+            ],
+        ),
+        "reference" => (
+            HeroPromo { title: "Reference desk — research guides & desk references".into(), coupon_code: Some("READ-REF".into()) },
+            vec![
+                book("The Chicago Manual of Style",    "University of Chicago Press", "REF 808.02 CHI"),
+                book("Merriam-Webster's Collegiate Dictionary", "Merriam-Webster",    "REF 423 MER"),
+                book("Statistical Abstract of the United States", "U.S. Census Bureau","REF 317.3 STA"),
+            ],
+        ),
+        "periodicals" => (
+            HeroPromo { title: "Periodicals — this week's magazines & dailies".into(), coupon_code: Some("READ-PER".into()) },
+            vec![
+                book("The New Yorker",       "Various", "PER"),
+                book("National Geographic",  "Various", "PER"),
+                book("Scientific American",  "Various", "PER"),
+            ],
+        ),
+        "audiovisual" => (
+            HeroPromo { title: "Audio & video — new audiobooks, music, and film".into(), coupon_code: Some("READ-AV-NEW".into()) },
+            vec![
+                book("Demon Copperhead (audiobook)", "Barbara Kingsolver",            "AV CD KINGSOLVER"),
+                book("The Civil War (DVD)",          "Ken Burns",                     "AV DVD 973.7 BUR"),
+                book("Oppenheimer (DVD)",            "Christopher Nolan",             "AV DVD OPPENHEIMER"),
+            ],
+        ),
+        "computers" | "dewey-000" => (
+            HeroPromo { title: "000 — General knowledge, computing, & information science".into(), coupon_code: Some("READ-000".into()) },
+            vec![
+                book("Code",                 "Charles Petzold",           "005 PET"),
+                book("The Pragmatic Programmer", "Andrew Hunt & David Thomas", "005.1 HUN"),
+                book("How to Read a Book",   "Mortimer Adler",            "028.9 ADL"),
+            ],
+        ),
+        "dewey-100" => (
+            HeroPromo { title: "100 — Philosophy & psychology".into(), coupon_code: Some("READ-100".into()) },
+            vec![
+                book("Thinking, Fast and Slow",     "Daniel Kahneman",    "153.42 KAH"),
+                book("Man's Search for Meaning",    "Viktor Frankl",      "150.195 FRA"),
+                book("Meditations",                 "Marcus Aurelius",    "188 AUR"),
+            ],
+        ),
+        "dewey-200" => (
+            HeroPromo { title: "200 — Religion & belief".into(), coupon_code: Some("READ-200".into()) },
+            vec![
+                book("The World's Religions",       "Huston Smith",       "200 SMI"),
+                book("Tao Te Ching",                "Lao Tzu",            "299.5 LAO"),
+                book("The Bhagavad Gita",           "Various",            "294.5924 BHA"),
+            ],
+        ),
+        "dewey-300" => (
+            HeroPromo { title: "300 — Social sciences, sociology, law, & economics".into(), coupon_code: Some("READ-300".into()) },
+            vec![
+                book("Caste",                       "Isabel Wilkerson",   "305.5 WIL"),
+                book("Evicted",                     "Matthew Desmond",    "363.5 DES"),
+                book("The New Jim Crow",            "Michelle Alexander", "364.973 ALE"),
+            ],
+        ),
+        "dewey-400" => (
+            HeroPromo { title: "400 — Language, linguistics, & writing".into(), coupon_code: Some("READ-400".into()) },
+            vec![
+                book("Because Internet",            "Gretchen McCulloch", "417.2 MCC"),
+                book("The Elements of Style",       "Strunk & White",     "428.2 STR"),
+                book("The Mother Tongue",           "Bill Bryson",        "420.9 BRY"),
+            ],
+        ),
+        "dewey-500" => (
+            HeroPromo { title: "500 — Pure science: math, physics, biology, & the natural world".into(), coupon_code: Some("READ-500".into()) },
+            vec![
+                book("A Brief History of Time",     "Stephen Hawking",    "523.1 HAW"),
+                book("The Gene",                    "Siddhartha Mukherjee","576.5 MUK"),
+                book("Humble Pi",                   "Matt Parker",        "510 PAR"),
+            ],
+        ),
+        "dewey-600" => (
+            HeroPromo { title: "600 — Applied science: tech, medicine, cooking, & gardening".into(), coupon_code: Some("READ-600".into()) },
+            vec![
+                book("Salt, Fat, Acid, Heat",       "Samin Nosrat",       "641.5 NOS"),
+                book("The Body",                    "Bill Bryson",        "612 BRY"),
+                book("How to Avoid a Climate Disaster", "Bill Gates",     "628.5 GAT"),
+            ],
+        ),
+        "dewey-700" => (
+            HeroPromo { title: "700 — Arts & recreation: fine arts, music, sports".into(), coupon_code: Some("READ-700".into()) },
+            vec![
+                book("The Story of Art",            "E. H. Gombrich",     "709 GOM"),
+                book("This Is Your Brain on Music", "Daniel Levitin",     "781.11 LEV"),
+                book("Ways of Seeing",              "John Berger",        "701 BER"),
+            ],
+        ),
+        "dewey-800" => (
+            HeroPromo { title: "800 — Literature: poetry, drama, essays, & criticism".into(), coupon_code: Some("READ-800".into()) },
+            vec![
+                book("Milk and Honey",              "Rupi Kaur",          "811.6 KAU"),
+                book("Citizen",                     "Claudia Rankine",    "811.6 RAN"),
+                book("The Paris Review Interviews", "Various",            "808 PAR"),
+            ],
+        ),
+        "dewey-900" => (
+            HeroPromo { title: "900 — History, geography, & biography".into(), coupon_code: Some("READ-900".into()) },
+            vec![
+                book("Sapiens",                     "Yuval Noah Harari",  "909 HAR"),
+                book("1776",                        "David McCullough",   "973.3 MCC"),
+                book("Prisoners of Geography",      "Tim Marshall",       "910 MAR"),
+            ],
+        ),
+        "community" => (
+            HeroPromo { title: "Community room — book clubs, events, and local history".into(), coupon_code: Some("READ-COMMUNITY".into()) },
+            vec![
+                book("Demon Copperhead",            "Barbara Kingsolver", "FIC KINGSOLVER"),
+                book("The Warmth of Other Suns",    "Isabel Wilkerson",   "305.896 WIL"),
+                book("Braiding Sweetgrass",         "Robin Wall Kimmerer","581.63 KIM"),
+            ],
+        ),
+        _ => (
+            HeroPromo { title: format!("Reading list for the {dept} section"), coupon_code: None },
+            Vec::new(),
+        ),
+    }
 }
 
 // ============================================================
