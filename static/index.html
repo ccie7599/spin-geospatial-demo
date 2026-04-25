@@ -940,11 +940,6 @@ body {
   color: var(--text-muted);
   padding: 0 8px;
 }
-.arch-flow-branch {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 .arch-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1247,12 +1242,13 @@ body {
           <span class="arch-flow-arrow">&rarr;</span>
           <div class="arch-flow-node" style="border-color:var(--accent-blue)">Akamai Edge<span class="arch-flow-sub">global PoPs</span></div>
           <span class="arch-flow-arrow">&rarr;</span>
-          <div class="arch-flow-node" style="border-color:var(--accent-green)">Spin Function<span class="arch-flow-sub">~440KB WASM, compute region</span></div>
+          <div class="arch-flow-node" style="border-color:var(--accent-green)">Spin Function<span class="arch-flow-sub">WASM, compute region</span></div>
           <span class="arch-flow-arrow">&rarr;</span>
-          <div class="arch-flow-branch">
-            <div class="arch-flow-node" style="border-color:var(--accent-cyan)">Spin KV<span class="arch-flow-sub">edge-local state</span></div>
-            <div class="arch-flow-node" style="border-color:var(--accent-purple)">Akamai Inference Cloud<span class="arch-flow-sub">Phi-3-mini on GPU, same region</span></div>
-          </div>
+          <div class="arch-flow-node" style="border-color:var(--accent-cyan)">Spin KV<span class="arch-flow-sub">edge-local state</span></div>
+          <span class="arch-flow-arrow">&rarr;</span>
+          <div class="arch-flow-node" style="border-color:var(--accent-purple)">Inference Cloud<span class="arch-flow-sub">Phi-3-mini on GPU, same region</span></div>
+          <span class="arch-flow-arrow">&rarr;</span>
+          <div class="arch-flow-node" style="border-color:var(--accent-orange)">TrafficPeak<span class="arch-flow-sub">DS2, observability</span></div>
         </div>
         <div class="arch-cards">
           <div class="arch-card">
