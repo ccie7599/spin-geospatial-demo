@@ -803,6 +803,7 @@ async fn handle_recommend(req: Request, _params: Params) -> anyhow::Result<impl 
     let qs = parse_query_string(req.uri());
     let device_id = qs.get("deviceId").cloned().unwrap_or_default();
     let n_items: u32 = qs.get("nItems").and_then(|s| s.parse().ok()).unwrap_or(4);
+    let zone_override = qs.get("zone").cloned();
 
     if device_id.is_empty() {
         return Ok(json_response(400, &ErrorResponse {
@@ -810,26 +811,33 @@ async fn handle_recommend(req: Request, _params: Params) -> anyhow::Result<impl 
         }));
     }
 
-    let store = open_store()?;
-    let state = match get_device_state(&store, &device_id) {
-        Some(s) => s,
-        None => return Ok(json_response(404, &ErrorResponse {
-            error: format!("no state for device {device_id} — check in first"),
-        })),
-    };
-
-    let zone = match state.department.clone() {
-        Some(z) => z,
-        None => return Ok(json_response(409, &ErrorResponse {
-            error: "device is in store but no department detected yet".into(),
-        })),
+    // Resolve zone: explicit `?zone=` wins (used by the demo floor plan, where
+    // dot position is the source of truth); otherwise fall back to the device's
+    // last-known department from KV (the production flow).
+    let (venue_id, zone) = if let Some(z) = zone_override {
+        (None, z)
+    } else {
+        let store = open_store()?;
+        let state = match get_device_state(&store, &device_id) {
+            Some(s) => s,
+            None => return Ok(json_response(404, &ErrorResponse {
+                error: format!("no state for device {device_id} — check in first"),
+            })),
+        };
+        let zone = match state.department.clone() {
+            Some(z) => z,
+            None => return Ok(json_response(409, &ErrorResponse {
+                error: "device is in store but no department detected yet".into(),
+            })),
+        };
+        (state.store_id.clone(), zone)
     };
 
     let reco_url = spin_sdk::variables::get("reco_url")
         .unwrap_or_else(|_| "https://geospatial.connected-cloud.io/reco/v1/recommend".to_string());
 
     let body = serde_json::json!({
-        "venueId": state.store_id,
+        "venueId": venue_id,
         "zone": zone,
         "recentZones": [],
         "nItems": n_items,

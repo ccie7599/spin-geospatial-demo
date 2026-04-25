@@ -3176,8 +3176,23 @@ async function updateFloorPosition(fx, fy) {
   if (state.scene === 5) {
     updateCoupons(fx, fy);
   }
+  if (state.scene === 6) {
+    schedulePicksRefresh(currentZone);
+  }
 
   drawFloorplan();
+}
+
+// Debounced + zone-change-aware refresh for scene 6. Avoids hammering the
+// reco service on every mousemove during a drag.
+let _picksZoneLast = null;
+let _picksRefreshTimer = null;
+function schedulePicksRefresh(zone) {
+  if (zone == null) return;                  // between zones — wait for landing
+  if (zone === _picksZoneLast) return;       // same zone — nothing to do
+  _picksZoneLast = zone;
+  clearTimeout(_picksRefreshTimer);
+  _picksRefreshTimer = setTimeout(() => fetchPicks(), 250);
 }
 
 function updateFloorStats(data, lat, lon) {
@@ -3392,9 +3407,27 @@ async function fetchPicks() {
     listEl.appendChild(card);
   }
 
+  // Determine current zone from the floor-plan dot. In production the device
+  // would post its lat/lon to /api/v1/checkin and Spin would compute the
+  // department server-side; the demo floor plan uses a virtual anchor, so we
+  // pass the zone explicitly.
+  const fx = state.floorDotPos?.x ?? 0.5;
+  const fy = state.floorDotPos?.y ?? 0.5;
+  let currentZone = null;
+  DEPT_ZONES.forEach(z => {
+    if (fx >= z.x && fx <= z.x + z.w && fy >= z.y && fy <= z.y + z.h) {
+      currentZone = z.name;
+    }
+  });
+  const zoneParam = currentZone ? `&zone=${encodeURIComponent(currentZone)}` : '';
+  subEl.textContent = currentZone
+    ? `Calling Spin → reco service · zone=${currentZone}…`
+    : 'Calling Spin → reco service · between zones…';
+  _picksZoneLast = currentZone;
+
   const t0 = performance.now();
   try {
-    const data = await apiCall('GET', `/api/v1/recommend?deviceId=${DEVICE_ID}&nItems=4`);
+    const data = await apiCall('GET', `/api/v1/recommend?deviceId=${DEVICE_ID}&nItems=4${zoneParam}`);
     const dt = Math.round(performance.now() - t0);
 
     listEl.innerHTML = '';
