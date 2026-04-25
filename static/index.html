@@ -940,6 +940,11 @@ body {
   color: var(--text-muted);
   padding: 0 8px;
 }
+.arch-flow-branch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .arch-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1111,6 +1116,29 @@ body {
   margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--border);
   font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);
 }
+.picks-pipeline {
+  display: flex; align-items: stretch; gap: 8px;
+  margin: 10px 0 18px 0; padding: 12px 14px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+.pipe-node {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  flex: 1 1 0; min-width: 130px;
+  padding: 4px 8px;
+  border-left: 3px solid var(--border);
+}
+.pipe-node.browser { border-left-color: var(--accent-cyan); }
+.pipe-node.cdn     { border-left-color: var(--accent-blue); }
+.pipe-node.spin    { border-left-color: var(--accent-purple); }
+.pipe-node.reco    { border-left-color: var(--accent-orange); }
+.pipe-icon { font-size: 18px; line-height: 1; }
+.pipe-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.pipe-detail { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+.pipe-arrow {
+  align-self: center; color: var(--text-muted); font-size: 14px; flex-shrink: 0;
+}
 /* Redoc dark overrides — main content panel */
 .api-docs-panel .redoc-wrap { background: var(--bg-primary) !important; color: var(--text-primary) !important; }
 .api-docs-panel .api-content { background: var(--bg-primary) !important; }
@@ -1219,9 +1247,12 @@ body {
           <span class="arch-flow-arrow">&rarr;</span>
           <div class="arch-flow-node" style="border-color:var(--accent-blue)">Akamai Edge<span class="arch-flow-sub">global PoPs</span></div>
           <span class="arch-flow-arrow">&rarr;</span>
-          <div class="arch-flow-node" style="border-color:var(--accent-green)">Spin WASM<span class="arch-flow-sub">~440KB binary</span></div>
+          <div class="arch-flow-node" style="border-color:var(--accent-green)">Spin Function<span class="arch-flow-sub">~440KB WASM, compute region</span></div>
           <span class="arch-flow-arrow">&rarr;</span>
-          <div class="arch-flow-node" style="border-color:var(--accent-cyan)">Spin KV<span class="arch-flow-sub">edge-local state</span></div>
+          <div class="arch-flow-branch">
+            <div class="arch-flow-node" style="border-color:var(--accent-cyan)">Spin KV<span class="arch-flow-sub">edge-local state</span></div>
+            <div class="arch-flow-node" style="border-color:var(--accent-purple)">Akamai Inference Cloud<span class="arch-flow-sub">Phi-3-mini on GPU, same region</span></div>
+          </div>
         </div>
         <div class="arch-cards">
           <div class="arch-card">
@@ -1300,6 +1331,29 @@ body {
           <div class="picks-sub" id="picksSub">Loading…</div>
         </div>
         <button class="picks-refresh" id="picksRefresh">Refresh</button>
+      </div>
+      <div class="picks-pipeline">
+        <div class="pipe-node browser">
+          <span class="pipe-icon">&#x1F4F1;</span>
+          <span class="pipe-label">Browser</span>
+        </div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-node cdn">
+          <span class="pipe-icon">&#x1F310;</span>
+          <span class="pipe-label">Akamai CDN</span>
+        </div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-node spin">
+          <span class="pipe-icon">&#x26A1;</span>
+          <span class="pipe-label">Spin (compute region)</span>
+          <span class="pipe-detail">/api/v1/recommend</span>
+        </div>
+        <span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-node reco">
+          <span class="pipe-icon">&#x1F9E0;</span>
+          <span class="pipe-label">Reco (us-ord)</span>
+          <span class="pipe-detail">Phi-3-mini · RTX 4000 Ada</span>
+        </div>
       </div>
       <div class="picks-list" id="picksList"></div>
       <div class="picks-footer" id="picksFooter"></div>
