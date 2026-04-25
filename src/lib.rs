@@ -20,7 +20,7 @@ use spatial_store::*;
 // ============================================================
 
 #[http_component]
-fn handle_request(req: Request) -> anyhow::Result<impl IntoResponse> {
+async fn handle_request(req: Request) -> anyhow::Result<impl IntoResponse> {
     let mut router = Router::new();
 
     // System APIs
@@ -38,8 +38,9 @@ fn handle_request(req: Request) -> anyhow::Result<impl IntoResponse> {
     router.get("/api/v1/stores/:storeId/find", handle_find);
     router.get("/api/v1/stores/:storeId/position", handle_position);
     router.get("/api/v1/stores/:storeId/context", handle_context);
+    router.get_async("/api/v1/recommend", handle_recommend);
 
-    Ok(router.handle(req))
+    Ok(router.handle_async(req).await)
 }
 
 // ============================================================
@@ -786,6 +787,73 @@ fn content_for_section(dept: &str) -> (HeroPromo, Vec<Book>) {
             Vec::new(),
         ),
     }
+}
+
+// ============================================================
+// GET /api/v1/recommend?deviceId=…  — Personalized picks (Step 6)
+// ============================================================
+// Reads the device's current zone from KV, fans out to the reco service
+// (LLM-driven book picker, GPU-backed Phi-3-mini) via outbound HTTP, and
+// passes the JSON response back to the client. The reco service is fronted
+// by the same Akamai property — token auth is injected by the property rule
+// (modifyOutgoingRequestHeader → X-Reco-Token), so this function holds no
+// secret.
+
+async fn handle_recommend(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
+    let qs = parse_query_string(req.uri());
+    let device_id = qs.get("deviceId").cloned().unwrap_or_default();
+    let n_items: u32 = qs.get("nItems").and_then(|s| s.parse().ok()).unwrap_or(4);
+
+    if device_id.is_empty() {
+        return Ok(json_response(400, &ErrorResponse {
+            error: "deviceId required".into(),
+        }));
+    }
+
+    let store = open_store()?;
+    let state = match get_device_state(&store, &device_id) {
+        Some(s) => s,
+        None => return Ok(json_response(404, &ErrorResponse {
+            error: format!("no state for device {device_id} — check in first"),
+        })),
+    };
+
+    let zone = match state.department.clone() {
+        Some(z) => z,
+        None => return Ok(json_response(409, &ErrorResponse {
+            error: "device is in store but no department detected yet".into(),
+        })),
+    };
+
+    let reco_url = spin_sdk::variables::get("reco_url")
+        .unwrap_or_else(|_| "https://geospatial.connected-cloud.io/reco/v1/recommend".to_string());
+
+    let body = serde_json::json!({
+        "venueId": state.store_id,
+        "zone": zone,
+        "recentZones": [],
+        "nItems": n_items,
+    }).to_string();
+
+    let outbound = Request::builder()
+        .method(spin_sdk::http::Method::Post)
+        .uri(reco_url)
+        .header("content-type", "application/json")
+        .body(body)
+        .build();
+
+    let resp: Response = match spin_sdk::http::send(outbound).await {
+        Ok(r) => r,
+        Err(e) => return Ok(json_response(502, &ErrorResponse {
+            error: format!("reco upstream error: {e}"),
+        })),
+    };
+
+    Ok(Response::builder()
+        .status(*resp.status())
+        .header("content-type", "application/json")
+        .body(resp.into_body())
+        .build())
 }
 
 // ============================================================

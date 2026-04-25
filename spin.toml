@@ -6,6 +6,9 @@ version = "0.1.0"
 description = "Geohash spatial proximity on Spin KV with cell painting + upward write amplification. Demo dataset: US public libraries."
 authors = ["ccie7599"]
 
+[variables]
+reco_url = { default = "https://geospatial.connected-cloud.io/reco/v1/recommend" }
+
 # API routes — geospatial Rust WASM component
 [[trigger.http]]
 route = "/api/..."
@@ -31,6 +34,10 @@ component = "fileserver"
 [component.geospatial]
 source = "target/wasm32-wasip1/release/spin_geospatial_demo.wasm"
 key_value_stores = ["default"]
+allowed_outbound_hosts = ["https://geospatial.connected-cloud.io"]
+
+[component.geospatial.variables]
+reco_url = "{{ reco_url }}"
 
 [component.geospatial.build]
 command = "cargo build --target wasm32-wasip1 --release"

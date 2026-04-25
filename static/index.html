@@ -1051,6 +1051,66 @@ body {
   background: var(--bg-primary);
 }
 .api-docs-panel.hidden { display: none; }
+
+/* Scene 6 — Personalized Picks panel */
+.picks-panel {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 10;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  padding: 24px 32px;
+}
+.picks-panel.hidden { display: none; }
+.picks-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.picks-title {
+  font-family: var(--font-display); font-size: 20px; font-weight: 700;
+  color: var(--text-primary);
+}
+.picks-sub {
+  font-size: 12px; color: var(--text-secondary); margin-top: 4px;
+  font-family: var(--font-mono);
+}
+.picks-refresh {
+  padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-card); color: var(--text-primary); font-size: 13px;
+  font-weight: 500; cursor: pointer; transition: var(--transition-fast);
+}
+.picks-refresh:hover { background: var(--bg-card-hover); }
+.picks-refresh:disabled { opacity: 0.5; cursor: wait; }
+.picks-list {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+.pick-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.pick-card-header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+}
+.pick-card-title {
+  font-family: var(--font-display); font-size: 16px; font-weight: 700;
+  color: var(--text-primary); line-height: 1.25;
+}
+.pick-card-call {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+  white-space: nowrap;
+}
+.pick-card-author { font-size: 13px; color: var(--text-secondary); font-style: italic; }
+.pick-card-reason {
+  font-size: 14px; color: var(--text-primary); line-height: 1.45;
+  border-left: 3px solid var(--accent-orange); padding-left: 10px; margin-top: 4px;
+}
+.pick-card-reason.loading { color: var(--text-muted); font-style: italic; }
+.picks-footer {
+  margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--border);
+  font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);
+}
 /* Redoc dark overrides — main content panel */
 .api-docs-panel .redoc-wrap { background: var(--bg-primary) !important; color: var(--text-primary) !important; }
 .api-docs-panel .api-content { background: var(--bg-primary) !important; }
@@ -1087,7 +1147,8 @@ body {
     <button class="scene-tab" data-scene="3">Library Map</button>
     <button class="scene-tab" data-scene="4">Browse Books</button>
     <button class="scene-tab" data-scene="5">Reading Lists</button>
-    <button class="scene-tab" data-scene="6">API Docs</button>
+    <button class="scene-tab" data-scene="6">Personalized Picks</button>
+    <button class="scene-tab" data-scene="7">API Docs</button>
   </div>
   <div class="header-right">
     <a class="repo-link" href="https://github.com/ccie7599/spin-geospatial-demo" target="_blank" rel="noopener" title="Open-source reference implementation">
@@ -1129,6 +1190,10 @@ body {
         <div class="journey-step" data-scene="5">
           <div class="step-indicator">5</div>
           <span>Reading Lists</span>
+        </div>
+        <div class="journey-step" data-scene="6">
+          <div class="step-indicator">6</div>
+          <span>Personalized Picks</span>
         </div>
       </div>
     </div>
@@ -1227,7 +1292,20 @@ body {
       <div id="couponList"></div>
     </div>
 
-    <!-- API Docs panel (Scene 6) -->
+    <!-- Personalized Picks panel (Scene 6) -->
+    <div id="picksPanel" class="picks-panel hidden">
+      <div class="picks-header">
+        <div>
+          <div class="picks-title">Personalized picks for your section</div>
+          <div class="picks-sub" id="picksSub">Loading…</div>
+        </div>
+        <button class="picks-refresh" id="picksRefresh">Refresh</button>
+      </div>
+      <div class="picks-list" id="picksList"></div>
+      <div class="picks-footer" id="picksFooter"></div>
+    </div>
+
+    <!-- API Docs panel (Scene 7) -->
     <div id="apiDocsPanel" class="api-docs-panel hidden"></div>
 
     <!-- Floor legend -->
@@ -2245,11 +2323,12 @@ function logApiCall(method, path, status, ms, data) {
 // SCENE BANNERS
 // ============================================================
 const SCENE_BANNERS = {
-  1: { title: 'Library Locator', desc: 'Geohash spatial query across 2,274 real US public libraries (OpenStreetMap). Adjust precision to see how cell painting covers different areas.', hint: 'Drag the pin to explore. Click a library to continue.' },
+  1: { title: 'Library Locator', desc: 'Geohash spatial query across 17,980 real US public libraries (OpenStreetMap). Adjust precision to see how cell painting covers different areas.', hint: 'Drag the pin to explore. Click a library to continue.' },
   2: { title: 'Approaching the Library', desc: 'Simulated walk toward the library. Each step fires a location checkin API with real-time geofence event detection.', hint: 'Watch the events, or click Skip.' },
   3: { title: 'Library Map', desc: 'Section-level positioning using precision 9\u201310 geohashes. Same spatial engine, finer cells. Dewey Decimal shelves line the west wall; children\u2019s library is east.', hint: 'Drag the blue dot between sections.', next: { label: 'Next: Browse Books \u2192', scene: 4 } },
   4: { title: 'Browse Books', desc: 'Spatial search for books on the shelves. Each title is an ingested object with floor-plan coordinates in its Dewey section.', hint: 'Type a title to search. Press space to show all books.', next: { label: 'Next: Reading Lists \u2192', scene: 5 } },
-  5: { title: 'Reading Lists', desc: 'Context-aware reading recommendations for the section you\u2019re standing in. Wayfinding paths rendered in real time.', hint: 'Drag the blue dot between shelves to see the list change.' },
+  5: { title: 'Reading Lists', desc: 'Context-aware reading recommendations for the section you\u2019re standing in. Wayfinding paths rendered in real time.', hint: 'Drag the blue dot between shelves to see the list change.', next: { label: 'Next: Personalized Picks \u2192', scene: 6 } },
+  6: { title: 'Personalized Picks', desc: 'Spin function calls a GPU-backed LLM (Phi-3-mini on vLLM) in the same compute region. Picks come from a 593-book catalog; each reason is generated live, per visitor, per zone.', hint: 'Click Refresh to regenerate picks for your current section.' },
 };
 
 function showBanner(n) {
@@ -2296,9 +2375,13 @@ function setScene(n) {
   // Show/hide architecture overview
   document.getElementById('archOverview').classList.toggle('hidden', n !== 0);
 
-  // Show/hide API docs panel
-  document.getElementById('apiDocsPanel').classList.toggle('hidden', n !== 6);
-  if (n === 6 && !window._redocInitialized) {
+  // Show/hide Personalized Picks panel (scene 6)
+  document.getElementById('picksPanel').classList.toggle('hidden', n !== 6);
+  if (n === 6) initScene6();
+
+  // Show/hide API docs panel (scene 7)
+  document.getElementById('apiDocsPanel').classList.toggle('hidden', n !== 7);
+  if (n === 7 && !window._redocInitialized) {
     window._redocInitialized = true;
     const spec = JSON.parse(document.getElementById('openapi-spec').textContent);
     Redoc.init(spec, {
@@ -2349,7 +2432,7 @@ function setScene(n) {
   // Show/hide map vs floor plan
   const showMap = (n >= 1 && n <= 2);
   document.getElementById('map').classList.toggle('hidden', !showMap);
-  document.getElementById('floorplan').classList.toggle('hidden', n < 3 || n === 6);
+  document.getElementById('floorplan').classList.toggle('hidden', n < 3 || n === 6 || n === 7);
   if (showMap) { setTimeout(() => map.invalidateSize(), 350); }
 
   // Clean up roaming when leaving Scene 1
@@ -2380,7 +2463,7 @@ function setScene(n) {
   state.couponBooks = [];
 
   document.getElementById('headerStatus').textContent = [
-    'Architecture', 'Library Locator', 'Approaching...', 'Library Map', 'Browse Books', 'Reading Lists', 'API Reference'
+    'Architecture', 'Library Locator', 'Approaching...', 'Library Map', 'Browse Books', 'Reading Lists', 'Personalized Picks', 'API Reference'
   ][n];
 
   // Scene banners (skip for scene 0 — the overview IS the explainer)
@@ -3278,6 +3361,78 @@ function isInAnyZone(pos) {
 }
 
 // ============================================================
+// SCENE 6 — Personalized Picks (LLM-generated, GPU-backed)
+// ============================================================
+async function initScene6() {
+  await fetchPicks();
+}
+
+async function fetchPicks() {
+  const subEl = document.getElementById('picksSub');
+  const listEl = document.getElementById('picksList');
+  const footEl = document.getElementById('picksFooter');
+  const btn = document.getElementById('picksRefresh');
+
+  btn.disabled = true;
+  subEl.textContent = 'Calling Spin → reco service…';
+  listEl.innerHTML = '';
+  footEl.textContent = '';
+
+  // Skeleton cards while we wait
+  for (let i = 0; i < 4; i++) {
+    const card = document.createElement('div');
+    card.className = 'pick-card';
+    card.innerHTML = `
+      <div class="pick-card-header">
+        <div class="pick-card-title" style="opacity:0.3">Loading…</div>
+        <div class="pick-card-call"></div>
+      </div>
+      <div class="pick-card-author" style="opacity:0.3">…</div>
+      <div class="pick-card-reason loading">Generating reason via Phi-3-mini…</div>`;
+    listEl.appendChild(card);
+  }
+
+  const t0 = performance.now();
+  try {
+    const data = await apiCall('GET', `/api/v1/recommend?deviceId=${DEVICE_ID}&nItems=4`);
+    const dt = Math.round(performance.now() - t0);
+
+    listEl.innerHTML = '';
+    (data.items || []).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'pick-card';
+      card.innerHTML = `
+        <div class="pick-card-header">
+          <div class="pick-card-title">${escapeHtml(item.title)}</div>
+          <div class="pick-card-call">${escapeHtml(item.callNumber || '')}</div>
+        </div>
+        <div class="pick-card-author">${escapeHtml(item.author || '')}</div>
+        <div class="pick-card-reason">${escapeHtml(item.reason || '')}</div>`;
+      listEl.appendChild(card);
+    });
+
+    const zoneText = data.items?.[0]?.ddcClass ? ` · zone class ${data.items[0].ddcClass}` : '';
+    subEl.textContent = `${data.items?.length || 0} picks · ${data.strategy} · ${data.latencyMs}ms inference${zoneText}`;
+    footEl.textContent =
+      `Spin (compute region) → reco origin via Akamai property · model=${data.model} · embed=${data.embedModel} · client round-trip=${dt}ms`;
+  } catch (e) {
+    listEl.innerHTML = '';
+    subEl.textContent = 'Failed to fetch picks';
+    const errCard = document.createElement('div');
+    errCard.className = 'pick-card';
+    errCard.innerHTML = `<div class="pick-card-reason">${escapeHtml(String(e?.message || e))}</div>`;
+    listEl.appendChild(errCard);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+// ============================================================
 // FLOOR PLAN INTERACTION — Click/Drag to move dot
 // ============================================================
 (function setupFloorInteraction() {
@@ -3423,6 +3578,9 @@ document.getElementById('btnDismissStore').addEventListener('click', () => {
   document.getElementById('storeCard').classList.add('hidden');
 });
 
+// Personalized Picks (Scene 6) — Refresh button
+document.getElementById('picksRefresh').addEventListener('click', fetchPicks);
+
 // Sim controls
 document.getElementById('btnPause').addEventListener('click', () => {
   state.simPaused = !state.simPaused;
@@ -3464,7 +3622,7 @@ window.addEventListener('resize', () => {
 // INIT
 // ============================================================
 (async function init() {
-  // Health check only — the 2,274+ libraries are pre-ingested via
+  // Health check only — the 17,980 libraries are pre-ingested via
   // load-libraries.sh on the backend. Books in MOCK_PRODUCTS are
   // frontend-only demo data; no ingest needed at page load.
   await apiCall('GET', '/health');
