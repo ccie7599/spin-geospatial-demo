@@ -943,7 +943,7 @@ body {
 }
 .arch-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   margin-bottom: 28px;
 }
@@ -962,6 +962,7 @@ body {
 .arch-card h3.ingest { color: var(--accent-green); }
 .arch-card h3.query { color: var(--accent-blue); }
 .arch-card h3.events { color: var(--accent-orange); }
+.arch-card h3.personalize { color: var(--accent-purple); }
 .arch-card p {
   font-size: 11px;
   color: var(--text-secondary);
@@ -1237,7 +1238,7 @@ body {
       <div class="arch-inner">
         <h1>Step Inside</h1>
         <div class="arch-tagline" style="font-family:var(--font-display);font-style:italic;color:var(--accent-orange);font-size:16px;margin-top:-4px;margin-bottom:10px;">From the globe down to the shelf.</div>
-        <div class="arch-subtitle">Edge-native venue proximity on Akamai Functions (Fermyon Spin). Libraries, retail, stadiums — anywhere visitors cross a threshold.</div>
+        <div class="arch-subtitle">Edge-native venue proximity and personalized recommendations, powered by Akamai Functions and Akamai Inference Cloud. Locate, geofence, and recommend &mdash; for libraries, retail, hospitality, or anywhere visitors cross a threshold.</div>
         <div class="arch-flow">
           <div class="arch-flow-node">Mobile App<span class="arch-flow-sub">lat/lon checkins</span></div>
           <span class="arch-flow-arrow">&rarr;</span>
@@ -1264,13 +1265,19 @@ body {
             <h3 class="events">Events</h3>
             <p>Stateful enter/exit/dwell detection with 3-ping hysteresis. Server-side geofencing &mdash; no client SDK needed.</p>
           </div>
+          <div class="arch-card">
+            <h3 class="personalize">Personalize</h3>
+            <p>Phi-3-mini-4k-instruct served by vLLM on a region-local GPU. Per-visitor, per-zone recommendations generated live by the Spin function over Akamai's network.</p>
+          </div>
         </div>
         <div class="arch-badges">
           <span class="arch-badge">Rust</span>
           <span class="arch-badge">WASM</span>
           <span class="arch-badge">Spin KV</span>
           <span class="arch-badge">Geohash</span>
-          <span class="arch-badge">Zero External Deps</span>
+          <span class="arch-badge">Phi-3-mini</span>
+          <span class="arch-badge">vLLM on GPU</span>
+          <span class="arch-badge">Inference Cloud</span>
         </div>
         <button class="arch-start-btn" onclick="setScene(1)">Start Demo &rarr;</button>
       </div>
