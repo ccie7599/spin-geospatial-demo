@@ -261,7 +261,15 @@ fn handle_query_point(_req: Request, params: Params) -> anyhow::Result<impl Into
     // Stores are painted at precisions 3, 4, 5, 7, 8 via upward write amplification.
     // Clamp minimum query precision to 3 (coarsest painted level).
     let max_precision = precision.max(3);
-    let radius_m = crate::geohash::cell_max_dim_m(precision) / 2.0;
+    // Pin the radius to the figures the UI labels for the slider precisions
+    // (~48 / ~12 / ~1.5 mi at p3 / p4 / p5). Falls back to the geometric
+    // cell_max_dim/2 for higher precisions used inside the floor plan.
+    let radius_m = match precision {
+        3 => 77_249.0,   // 48.000 mi exactly
+        4 => 19_312.0,   // 12.000 mi exactly
+        5 => 2_414.0,    //  1.500 mi exactly
+        _ => crate::geohash::cell_max_dim_m(precision) / 2.0,
+    };
     let opts = QueryOpts {
         precision: max_precision,
         min_precision: precision,
