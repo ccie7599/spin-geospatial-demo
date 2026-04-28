@@ -2322,6 +2322,47 @@ function createDotIcon(cls, size) {
 // ============================================================
 // API HELPER
 // ============================================================
+// ============================================================
+// Debounced + abortable spatial query
+// ============================================================
+// Floor-plan drag fires updateFloorPosition() per mousemove. Without
+// coalescing, that hits the function (and Spin KV) for every pixel. We:
+//   - debounce 200ms so a continuous drag fires at most one query per pause
+//   - abort the previous in-flight fetch when a newer call arrives
+//   - quantize lat/lon at coarse precisions to maximize CDN cache hit rate
+// Returns the parsed response, or null if aborted.
+let _spatialAbort = null;
+let _spatialDebounceTimer = null;
+function debouncedSpatialQuery(lat, lon, precision) {
+  // Coarse-precision queries (continental locator) round to ~10m so
+  // identical drops in the same neighborhood collapse to one cache key.
+  const decimals = precision <= 5 ? 4 : 6;
+  const latStr = lat.toFixed(decimals);
+  const lonStr = lon.toFixed(decimals);
+  const url = BASE + `/query/point/${latStr}/${lonStr}/${precision}`;
+
+  if (_spatialAbort) _spatialAbort.abort();
+  if (_spatialDebounceTimer) clearTimeout(_spatialDebounceTimer);
+
+  return new Promise((resolve) => {
+    _spatialDebounceTimer = setTimeout(async () => {
+      _spatialAbort = new AbortController();
+      const t0 = performance.now();
+      try {
+        const r = await fetch(url, { signal: _spatialAbort.signal });
+        const data = await r.json();
+        state.apiCallCount++;
+        logApiCall('GET', `/query/point/${latStr}/${lonStr}/${precision}`, r.status,
+               Math.round(performance.now() - t0), data);
+        resolve(data);
+      } catch (e) {
+        if (e.name === 'AbortError') resolve(null);
+        else { console.error(e); resolve({ error: e.message }); }
+      }
+    }, 200);
+  });
+}
+
 async function apiCall(method, path, body) {
   const t0 = performance.now();
   const opts = { method };
@@ -2643,7 +2684,10 @@ function cleanupRoamingLayers() {
 
 async function roamingQuery(lat, lon) {
   const precision = state.roamingPrecision;
-  const data = await apiCall('GET', `/query/point/${lat.toFixed(6)}/${lon.toFixed(6)}/${precision}`);
+  // Reuse the debounced/abortable/quantized path; coarse precisions collapse
+  // to ~10m cache keys, finer precisions keep full lat/lon.
+  const data = await debouncedSpatialQuery(lat, lon, precision);
+  if (!data) return;
 
   // Update stats
   const gh = data.query?.geohash || '--';
@@ -3221,8 +3265,11 @@ async function updateFloorPosition(fx, fy) {
     state.highlightDept = currentZone;
   }
 
-  // Spatial query at precision 10 for indoor
-  const data = await apiCall('GET', `/query/point/${lat.toFixed(6)}/${lon.toFixed(6)}/10`);
+  // Spatial query at precision 10 for indoor — debounced + abortable so a
+  // continuous mouse drag fires at most one in-flight request, with the
+  // previous call cancelled if a newer drag position arrives.
+  const data = await debouncedSpatialQuery(lat, lon, 10);
+  if (!data) return;  // aborted by a newer drag
 
   // Update floor stats panel
   updateFloorStats(data, lat, lon);
