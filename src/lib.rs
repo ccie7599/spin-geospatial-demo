@@ -372,9 +372,7 @@ async fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl In
     // radius_m bounds "inside" to a real-world distance: upward-amplified paint
     // cells otherwise match at p7 (~153m) and falsely claim in-venue up to 150m
     // away from the library center.
-    // p8 (~38m precision) is sufficient for the 45m geofence radius — drops
-    // the p7 tier (8 neighbor reads) without losing detection accuracy.
-    let opts = QueryOpts { precision: 9, min_precision: 8, include_neighbors: true, radius_m: Some(45.0) };
+    let opts = QueryOpts { precision: 9, min_precision: 7, include_neighbors: true, radius_m: Some(45.0) };
     let context = query_point(&store, lat, lon, &opts).await;
 
     let stores: Vec<&SpatialObject> = context.objects.iter()

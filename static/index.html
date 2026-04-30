@@ -2684,10 +2684,7 @@ function cleanupRoamingLayers() {
 
 async function roamingQuery(lat, lon) {
   const precision = state.roamingPrecision;
-  // Reuse the debounced/abortable/quantized path; coarse precisions collapse
-  // to ~10m cache keys, finer precisions keep full lat/lon.
-  const data = await debouncedSpatialQuery(lat, lon, precision);
-  if (!data) return;
+  const data = await apiCall('GET', `/query/point/${lat.toFixed(6)}/${lon.toFixed(6)}/${precision}`);
 
   // Update stats
   const gh = data.query?.geohash || '--';
@@ -3265,11 +3262,10 @@ async function updateFloorPosition(fx, fy) {
     state.highlightDept = currentZone;
   }
 
-  // Spatial query at precision 10 for indoor — debounced + abortable so a
-  // continuous mouse drag fires at most one in-flight request, with the
-  // previous call cancelled if a newer drag position arrives.
-  const data = await debouncedSpatialQuery(lat, lon, 10);
-  if (!data) return;  // aborted by a newer drag
+  // Spatial query at precision 10 — the floor-plan dot fires per mousemove,
+  // and the demo deliberately leans into that responsiveness now that the
+  // backing KV has the throughput headroom for it.
+  const data = await apiCall('GET', `/query/point/${lat.toFixed(6)}/${lon.toFixed(6)}/10`);
 
   // Update floor stats panel
   updateFloorStats(data, lat, lon);
