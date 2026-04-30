@@ -7,7 +7,10 @@ description = "Geohash spatial proximity on Spin KV with cell painting + upward 
 authors = ["ccie7599"]
 
 [variables]
-reco_url = { default = "https://geospatial.connected-cloud.io/reco/v1/recommend" }
+reco_url   = { default = "https://geospatial.connected-cloud.io/reco/v1/recommend" }
+kv_endpoint = { default = "https://edge.nats-kv.connected-cloud.io" }
+kv_bucket   = { default = "t_a6a891c2bf2c6e2119c9fb7af4e6ce70__geocode" }
+kv_token    = { required = true }
 
 # API routes — geospatial Rust WASM component
 [[trigger.http]]
@@ -33,11 +36,16 @@ component = "fileserver"
 
 [component.geospatial]
 source = "target/wasm32-wasip1/release/spin_geospatial_demo.wasm"
-key_value_stores = ["default"]
-allowed_outbound_hosts = ["https://geospatial.connected-cloud.io"]
+allowed_outbound_hosts = [
+    "https://geospatial.connected-cloud.io",
+    "https://edge.nats-kv.connected-cloud.io",
+]
 
 [component.geospatial.variables]
-reco_url = "{{ reco_url }}"
+reco_url    = "{{ reco_url }}"
+kv_endpoint = "{{ kv_endpoint }}"
+kv_bucket   = "{{ kv_bucket }}"
+kv_token    = "{{ kv_token }}"
 
 [component.geospatial.build]
 command = "cargo build --target wasm32-wasip1 --release"

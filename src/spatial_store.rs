@@ -15,37 +15,37 @@ use std::collections::HashSet;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use spin_sdk::key_value::Store;
 
 use crate::geohash::{cell_size_description, encode, haversine_distance, neighbors, paint_cells, precision_for_radius};
+use crate::kv::KvStore as Store;
 use crate::models::*;
 
 // ============================================================
 // KV helpers
 // ============================================================
 
-fn kv_get_json<T: DeserializeOwned>(store: &Store, key: &str) -> Option<T> {
-    let bytes = store.get(key).ok()??;
+async fn kv_get_json<T: DeserializeOwned>(store: &Store, key: &str) -> Option<T> {
+    let bytes = store.get(key).await.ok()??;
     serde_json::from_slice(&bytes).ok()
 }
 
-fn kv_set_json<T: Serialize>(store: &Store, key: &str, value: &T) -> anyhow::Result<()> {
+async fn kv_set_json<T: Serialize>(store: &Store, key: &str, value: &T) -> anyhow::Result<()> {
     let bytes = serde_json::to_vec(value)?;
-    store.set(key, &bytes)?;
+    store.set(key, &bytes).await?;
     Ok(())
 }
 
-fn kv_get_refs(store: &Store, key: &str) -> Vec<String> {
-    kv_get_json::<Vec<String>>(store, key).unwrap_or_default()
+async fn kv_get_refs(store: &Store, key: &str) -> Vec<String> {
+    kv_get_json::<Vec<String>>(store, key).await.unwrap_or_default()
 }
 
-fn append_ref_to_cell(store: &Store, key: &str, object_ref: &str) -> anyhow::Result<()> {
-    let mut refs: Vec<String> = kv_get_json(store, key).unwrap_or_default();
+async fn append_ref_to_cell(store: &Store, key: &str, object_ref: &str) -> anyhow::Result<()> {
+    let mut refs: Vec<String> = kv_get_json(store, key).await.unwrap_or_default();
     // Match on ref name prefix (before |lat|lon) to avoid duplicates across format changes
     let ref_name = object_ref.split('|').next().unwrap_or(object_ref);
     if !refs.iter().any(|r| r.split('|').next().unwrap_or(r) == ref_name) {
         refs.push(object_ref.to_string());
-        kv_set_json(store, key, &refs)?;
+        kv_set_json(store, key, &refs).await?;
     }
     Ok(())
 }
@@ -88,7 +88,7 @@ fn upward_paint_precisions(native_precision: u8) -> Vec<u8> {
 // PAINT OBJECT — Write to spatial index + object store
 // ============================================================
 
-pub fn paint_object(store: &Store, obj: &ObjectIngest) -> anyhow::Result<PaintResult> {
+pub async fn paint_object(store: &Store, obj: &ObjectIngest) -> anyhow::Result<PaintResult> {
     let radius_meters = obj.radius.unwrap_or(50.0);
     let precision = obj.precision.unwrap_or_else(|| precision_for_radius(radius_meters, obj.lat));
     let cells = paint_cells(obj.lat, obj.lon, radius_meters, precision);
@@ -98,8 +98,8 @@ pub fn paint_object(store: &Store, obj: &ObjectIngest) -> anyhow::Result<PaintRe
 
     // Write object reference (with embedded coords) to each native spatial index cell
     for cell in &cells {
-        let key = format!("spatial:{precision}:{cell}");
-        append_ref_to_cell(store, &key, &ref_with_coords)?;
+        let key = format!("spatial.{precision}.{cell}");
+        append_ref_to_cell(store, &key, &ref_with_coords).await?;
     }
 
     // Upward write amplification — paint at coarser precisions
@@ -113,8 +113,8 @@ pub fn paint_object(store: &Store, obj: &ObjectIngest) -> anyhow::Result<PaintRe
             }
         }
         for parent_hash in &parent_hashes {
-            let key = format!("spatial:{parent_p}:{parent_hash}");
-            append_ref_to_cell(store, &key, &ref_with_coords)?;
+            let key = format!("spatial.{parent_p}.{parent_hash}");
+            append_ref_to_cell(store, &key, &ref_with_coords).await?;
             upward_cells_written += 1;
         }
     }
@@ -134,14 +134,14 @@ pub fn paint_object(store: &Store, obj: &ObjectIngest) -> anyhow::Result<PaintRe
         ingested_at: iso_timestamp(),
         distance_mi: None,
     };
-    let obj_key = format!("obj:{}:{}", obj.obj_type, obj.id);
-    kv_set_json(store, &obj_key, &full_object)?;
+    let obj_key = format!("obj.{}.{}", obj.obj_type, obj.id);
+    kv_set_json(store, &obj_key, &full_object).await?;
 
     // If department, append to store-depts index
     if obj.obj_type == "department" {
         if let Some(store_id) = obj.metadata.get("storeId").and_then(|v| v.as_str()) {
-            let depts_key = format!("store-depts:{store_id}");
-            append_ref_to_cell(store, &depts_key, &object_ref)?;
+            let depts_key = format!("store-depts.{store_id}");
+            append_ref_to_cell(store, &depts_key, &object_ref).await?;
         }
     }
 
@@ -159,7 +159,7 @@ pub fn paint_object(store: &Store, obj: &ObjectIngest) -> anyhow::Result<PaintRe
 // QUERY POINT — Direct KV reads with dedup + hydration
 // ============================================================
 
-pub fn query_point(store: &Store, lat: f64, lon: f64, opts: &QueryOpts) -> QueryResult {
+pub async fn query_point(store: &Store, lat: f64, lon: f64, opts: &QueryOpts) -> QueryResult {
     let full_geohash = encode(lat, lon, 12);
     // Map: ref_name → (lat, lon) from embedded coords
     let mut ref_coords: std::collections::HashMap<String, (f64, f64)> = std::collections::HashMap::new();
@@ -168,9 +168,9 @@ pub fn query_point(store: &Store, lat: f64, lon: f64, opts: &QueryOpts) -> Query
 
     for p in opts.min_precision..=opts.precision {
         let cell = &full_geohash[..p as usize];
-        let key = format!("spatial:{p}:{cell}");
+        let key = format!("spatial.{p}.{cell}");
 
-        let refs = kv_get_refs(store, &key);
+        let refs = kv_get_refs(store, &key).await;
         let ref_count = refs.len();
         total_refs += ref_count;
         for r in &refs {
@@ -193,8 +193,8 @@ pub fn query_point(store: &Store, lat: f64, lon: f64, opts: &QueryOpts) -> Query
                 let nbrs = neighbors(cell);
                 for dir in allowed_dirs {
                     if let Some(nbr_hash) = nbrs.get(dir) {
-                        let nbr_key = format!("spatial:{p}:{nbr_hash}");
-                        let nbr_refs = kv_get_refs(store, &nbr_key);
+                        let nbr_key = format!("spatial.{p}.{nbr_hash}");
+                        let nbr_refs = kv_get_refs(store, &nbr_key).await;
                         let nbr_count = nbr_refs.len();
                         total_refs += nbr_count;
                         for r in &nbr_refs {
@@ -233,7 +233,7 @@ pub fn query_point(store: &Store, lat: f64, lon: f64, opts: &QueryOpts) -> Query
         ref_coords.keys().cloned().collect()
     };
 
-    let mut objects = hydrate_objects(store, &refs_to_hydrate);
+    let mut objects = hydrate_objects(store, &refs_to_hydrate).await;
 
     // Annotate distance
     let meters_per_mile = 1609.344;
@@ -274,14 +274,14 @@ pub fn query_point(store: &Store, lat: f64, lon: f64, opts: &QueryOpts) -> Query
 // QUERY AREA — Direct KV reads on a geohash cell
 // ============================================================
 
-pub fn query_area(store: &Store, geohash: &str, include_neighbors: bool) -> QueryResult {
+pub async fn query_area(store: &Store, geohash: &str, include_neighbors: bool) -> QueryResult {
     let precision = geohash.len() as u8;
     let mut object_ids = HashSet::new();
     let mut cells_queried = Vec::new();
 
     // Primary cell
-    let key = format!("spatial:{precision}:{geohash}");
-    let refs = kv_get_refs(store, &key);
+    let key = format!("spatial.{precision}.{geohash}");
+    let refs = kv_get_refs(store, &key).await;
     let ref_count = refs.len();
     for r in &refs {
         let (name, _, _) = parse_ref_coords(r);
@@ -301,8 +301,8 @@ pub fn query_area(store: &Store, geohash: &str, include_neighbors: bool) -> Quer
             let nbrs = neighbors(geohash);
             for dir in allowed_dirs {
                 if let Some(nbr_hash) = nbrs.get(dir) {
-                    let nbr_key = format!("spatial:{precision}:{nbr_hash}");
-                    let nbr_refs = kv_get_refs(store, &nbr_key);
+                    let nbr_key = format!("spatial.{precision}.{nbr_hash}");
+                    let nbr_refs = kv_get_refs(store, &nbr_key).await;
                     let nbr_count = nbr_refs.len();
                     for r in &nbr_refs {
                         let (name, _, _) = parse_ref_coords(r);
@@ -321,7 +321,7 @@ pub fn query_area(store: &Store, geohash: &str, include_neighbors: bool) -> Quer
         }
     }
 
-    let objects = hydrate_objects(store, &object_ids);
+    let objects = hydrate_objects(store, &object_ids).await;
 
     QueryResult {
         query: QueryMeta {
@@ -345,14 +345,14 @@ pub fn query_area(store: &Store, geohash: &str, include_neighbors: bool) -> Quer
 // DEVICE STATE
 // ============================================================
 
-pub fn get_device_state(store: &Store, device_id: &str) -> Option<DeviceState> {
-    let key = format!("dev:{device_id}");
-    kv_get_json(store, &key)
+pub async fn get_device_state(store: &Store, device_id: &str) -> Option<DeviceState> {
+    let key = format!("dev.{device_id}");
+    kv_get_json(store, &key).await
 }
 
-pub fn set_device_state(store: &Store, device_id: &str, state: &DeviceState) -> anyhow::Result<()> {
-    let key = format!("dev:{device_id}");
-    kv_set_json(store, &key, state)
+pub async fn set_device_state(store: &Store, device_id: &str, state: &DeviceState) -> anyhow::Result<()> {
+    let key = format!("dev.{device_id}");
+    kv_set_json(store, &key, state).await
 }
 
 // ============================================================
@@ -484,17 +484,18 @@ pub fn to_floor_plan(store: &SpatialObject, lat: f64, lon: f64) -> (f64, f64) {
 }
 
 /// Fetch all department objects for a given store ID.
-pub fn get_store_departments(store: &Store, store_id: &str) -> Vec<SpatialObject> {
-    let depts_key = format!("store-depts:{store_id}");
-    let refs = kv_get_refs(store, &depts_key);
+pub async fn get_store_departments(store: &Store, store_id: &str) -> Vec<SpatialObject> {
+    let depts_key = format!("store-depts.{store_id}");
+    let refs = kv_get_refs(store, &depts_key).await;
     let ref_set: HashSet<String> = refs.into_iter().collect();
-    hydrate_objects(store, &ref_set)
+    hydrate_objects(store, &ref_set).await
 }
 
 /// Look up a spatial object by key from the KV store.
-pub fn get_object(store: &Store, key: &str) -> Option<SpatialObject> {
-    let kv_key = format!("obj:{key}");
-    kv_get_json(store, &kv_key)
+pub async fn get_object(store: &Store, key: &str) -> Option<SpatialObject> {
+    // Caller passes "<type>:<id>" (legacy format); normalize to dot for the kv layer.
+    let kv_key = format!("obj.{}", key.replace(':', "."));
+    kv_get_json(store, &kv_key).await
 }
 
 /// Format a distance in meters as human-readable text.
@@ -507,11 +508,12 @@ pub fn format_distance(meters: f64) -> String {
     }
 }
 
-fn hydrate_objects(store: &Store, object_ids: &HashSet<String>) -> Vec<SpatialObject> {
+async fn hydrate_objects(store: &Store, object_ids: &HashSet<String>) -> Vec<SpatialObject> {
     let mut objects = Vec::new();
     for ref_str in object_ids {
-        let key = format!("obj:{ref_str}");
-        if let Some(obj) = kv_get_json::<SpatialObject>(store, &key) {
+        // ref_str is "<type>:<id>"; normalize to dot for the kv layer.
+        let key = format!("obj.{}", ref_str.replace(':', "."));
+        if let Some(obj) = kv_get_json::<SpatialObject>(store, &key).await {
             objects.push(obj);
         }
     }

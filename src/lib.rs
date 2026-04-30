@@ -4,14 +4,15 @@
 // ============================================================
 
 mod geohash;
+mod kv;
 mod models;
 mod spatial_store;
 
 use spin_sdk::http::{IntoResponse, Params, Request, Response, Router};
 use spin_sdk::http_component;
-use spin_sdk::key_value::Store;
 
 use geohash::{encode, haversine_distance};
+use kv::KvStore as Store;
 use models::*;
 use spatial_store::*;
 
@@ -23,21 +24,21 @@ use spatial_store::*;
 async fn handle_request(req: Request) -> anyhow::Result<impl IntoResponse> {
     let mut router = Router::new();
 
-    // System APIs
-    router.post("/ingest/object", handle_ingest_object);
-    router.post("/ingest/store", handle_ingest_store);
-    router.post("/ingest/location", handle_ingest_location);
-    router.get("/query/point/:lat/:lon/:precision", handle_query_point);
-    router.get("/query/point/:lat/:lon", handle_query_point);
-    router.get("/query/area/:geohash", handle_query_area);
-    router.get("/query/store/:storeId", handle_query_store);
+    // System APIs — all KV-touching, async
+    router.post_async("/ingest/object", handle_ingest_object);
+    router.post_async("/ingest/store", handle_ingest_store);
+    router.post_async("/ingest/location", handle_ingest_location);
+    router.get_async("/query/point/:lat/:lon/:precision", handle_query_point);
+    router.get_async("/query/point/:lat/:lon", handle_query_point);
+    router.get_async("/query/area/:geohash", handle_query_area);
+    router.get_async("/query/store/:storeId", handle_query_store);
     router.get("/health", handle_health);
 
     // Customer-facing APIs
-    router.get("/api/v1/checkin", handle_checkin);
-    router.get("/api/v1/stores/:storeId/find", handle_find);
-    router.get("/api/v1/stores/:storeId/position", handle_position);
-    router.get("/api/v1/stores/:storeId/context", handle_context);
+    router.get_async("/api/v1/checkin", handle_checkin);
+    router.get_async("/api/v1/stores/:storeId/find", handle_find);
+    router.get_async("/api/v1/stores/:storeId/position", handle_position);
+    router.get_async("/api/v1/stores/:storeId/context", handle_context);
     router.get_async("/api/v1/recommend", handle_recommend);
 
     Ok(router.handle_async(req).await)
@@ -55,13 +56,13 @@ fn open_store() -> anyhow::Result<Store> {
 // POST /ingest/object
 // ============================================================
 
-fn handle_ingest_object(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_ingest_object(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
     let body: ObjectIngest = match parse_body(&req) {
         Ok(b) => b,
         Err(e) => return Ok(json_response(400, &ErrorResponse { error: e.to_string() })),
     };
     let store = open_store()?;
-    match paint_object(&store, &body) {
+    match paint_object(&store, &body).await {
         Ok(result) => Ok(json_response(
             200,
             &IngestObjectResponse {
@@ -77,7 +78,7 @@ fn handle_ingest_object(req: Request, _params: Params) -> anyhow::Result<impl In
 // POST /ingest/store
 // ============================================================
 
-fn handle_ingest_store(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_ingest_store(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
     let body: StoreIngest = match parse_body(&req) {
         Ok(b) => b,
         Err(e) => return Ok(json_response(400, &ErrorResponse { error: e.to_string() })),
@@ -119,7 +120,7 @@ fn handle_ingest_store(req: Request, _params: Params) -> anyhow::Result<impl Int
             m
         },
     };
-    results.push(paint_object(&store, &store_obj)?);
+    results.push(paint_object(&store, &store_obj).await?);
 
     // Paint each department
     for dept in &body.departments {
@@ -146,7 +147,7 @@ fn handle_ingest_store(req: Request, _params: Params) -> anyhow::Result<impl Int
                 m
             },
         };
-        results.push(paint_object(&store, &dept_obj)?);
+        results.push(paint_object(&store, &dept_obj).await?);
     }
 
     let total_cells: usize = results.iter().map(|r| r.cells_painted).sum();
@@ -167,7 +168,7 @@ fn handle_ingest_store(req: Request, _params: Params) -> anyhow::Result<impl Int
 // POST /ingest/location
 // ============================================================
 
-fn handle_ingest_location(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_ingest_location(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
     let body: LocationIngest = match parse_body(&req) {
         Ok(b) => b,
         Err(e) => return Ok(json_response(400, &ErrorResponse { error: e.to_string() })),
@@ -182,13 +183,13 @@ fn handle_ingest_location(req: Request, _params: Params) -> anyhow::Result<impl 
         include_neighbors: true,
         radius_m: None,
     };
-    let context = query_point(&store, body.lat, body.lon, &opts);
+    let context = query_point(&store, body.lat, body.lon, &opts).await;
 
-    let previous_state = get_device_state(&store, &body.device_id);
+    let previous_state = get_device_state(&store, &body.device_id).await;
     let (events, new_state) =
         detect_events(previous_state.as_ref(), &context, &body.device_id, &timestamp);
 
-    set_device_state(&store, &body.device_id, &new_state)?;
+    set_device_state(&store, &body.device_id, &new_state).await?;
 
     let response = LocationResponse {
         device_id: body.device_id.clone(),
@@ -233,7 +234,7 @@ fn handle_ingest_location(req: Request, _params: Params) -> anyhow::Result<impl 
 // GET /query/point/:lat/:lon(/:precision)
 // ============================================================
 
-fn handle_query_point(_req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_query_point(_req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
     let lat: f64 = params
         .get("lat")
         .and_then(|s| s.parse().ok())
@@ -276,7 +277,7 @@ fn handle_query_point(_req: Request, params: Params) -> anyhow::Result<impl Into
         include_neighbors: true,
         radius_m: Some(radius_m),
     };
-    let result = query_point(&store, lat, lon, &opts);
+    let result = query_point(&store, lat, lon, &opts).await;
 
     Ok(json_response(200, &result))
 }
@@ -285,10 +286,10 @@ fn handle_query_point(_req: Request, params: Params) -> anyhow::Result<impl Into
 // GET /query/area/:geohash
 // ============================================================
 
-fn handle_query_area(_req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_query_area(_req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
     let geohash = params.get("geohash").unwrap_or("");
     let store = open_store()?;
-    let result = query_area(&store, geohash, true);
+    let result = query_area(&store, geohash, true).await;
     Ok(json_response(200, &result))
 }
 
@@ -296,11 +297,11 @@ fn handle_query_area(_req: Request, params: Params) -> anyhow::Result<impl IntoR
 // GET /query/store/:storeId
 // ============================================================
 
-fn handle_query_store(_req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_query_store(_req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
     let store_id = params.get("storeId").unwrap_or("");
     let store = open_store()?;
 
-    match get_object(&store, &format!("store:{store_id}")) {
+    match get_object(&store, &format!("store:{store_id}")).await {
         Some(obj) => Ok(json_response(200, &obj)),
         None => Ok(json_response(
             404,
@@ -353,7 +354,7 @@ fn handle_health(_req: Request, _params: Params) -> anyhow::Result<impl IntoResp
 // GET /api/v1/checkin — In-Store Mode Trigger
 // ============================================================
 
-fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl IntoResponse> {
     let qs = parse_query_string(req.uri());
     let lat: f64 = qs.get("lat").and_then(|s| s.parse().ok()).unwrap_or(f64::NAN);
     let lon: f64 = qs.get("lon").and_then(|s| s.parse().ok()).unwrap_or(f64::NAN);
@@ -374,7 +375,7 @@ fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl IntoResp
     // p8 (~38m precision) is sufficient for the 45m geofence radius — drops
     // the p7 tier (8 neighbor reads) without losing detection accuracy.
     let opts = QueryOpts { precision: 9, min_precision: 8, include_neighbors: true, radius_m: Some(45.0) };
-    let context = query_point(&store, lat, lon, &opts);
+    let context = query_point(&store, lat, lon, &opts).await;
 
     let stores: Vec<&SpatialObject> = context.objects.iter()
         .filter(|o| o.obj_type == "store")
@@ -382,10 +383,10 @@ fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl IntoResp
 
     if let Some(s) = stores.first() {
         // IN STORE — run event detection
-        let previous_state = get_device_state(&store, &device_id);
+        let previous_state = get_device_state(&store, &device_id).await;
         let timestamp = iso_timestamp();
         let (events, new_state) = detect_events(previous_state.as_ref(), &context, &device_id, &timestamp);
-        set_device_state(&store, &device_id, &new_state)?;
+        set_device_state(&store, &device_id, &new_state).await?;
 
         let departments: Vec<CheckinDepartment> = context.objects.iter()
             .filter(|o| o.obj_type == "department")
@@ -423,7 +424,7 @@ fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl IntoResp
     } else {
         // NOT IN STORE — find nearest at wider precision
         let wide_opts = QueryOpts { precision: 5, min_precision: 4, include_neighbors: true, radius_m: None };
-        let wide_context = query_point(&store, lat, lon, &wide_opts);
+        let wide_context = query_point(&store, lat, lon, &wide_opts).await;
 
         let nearest = wide_context.objects.iter()
             .filter(|o| o.obj_type == "store")
@@ -455,7 +456,7 @@ fn handle_checkin(req: Request, _params: Params) -> anyhow::Result<impl IntoResp
 // GET /api/v1/stores/:storeId/find — Wayfinding
 // ============================================================
 
-fn handle_find(req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_find(req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
     let store_id = params.get("storeId").unwrap_or("");
     let qs = parse_query_string(req.uri());
     let query = qs.get("q").cloned().unwrap_or_default();
@@ -469,7 +470,7 @@ fn handle_find(req: Request, params: Params) -> anyhow::Result<impl IntoResponse
     let store = open_store()?;
 
     // Look up store
-    let store_obj: SpatialObject = match get_object(&store, &format!("store:{store_id}")) {
+    let store_obj: SpatialObject = match get_object(&store, &format!("store:{store_id}")).await {
         Some(s) => s,
         None => return Ok(json_response(404, &ErrorResponse {
             error: format!("Store {store_id} not found"),
@@ -477,7 +478,7 @@ fn handle_find(req: Request, params: Params) -> anyhow::Result<impl IntoResponse
     };
 
     // Get all departments for this store
-    let departments = get_store_departments(&store, store_id);
+    let departments = get_store_departments(&store, store_id).await;
     let query_lower = query.to_lowercase();
 
     let results: Vec<FindResult> = departments.iter()
@@ -515,7 +516,7 @@ fn handle_find(req: Request, params: Params) -> anyhow::Result<impl IntoResponse
 // GET /api/v1/stores/:storeId/position — Blue Dot
 // ============================================================
 
-fn handle_position(req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_position(req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
     let store_id = params.get("storeId").unwrap_or("");
     let qs = parse_query_string(req.uri());
     let lat: f64 = qs.get("lat").and_then(|s| s.parse().ok()).unwrap_or(f64::NAN);
@@ -529,7 +530,7 @@ fn handle_position(req: Request, params: Params) -> anyhow::Result<impl IntoResp
 
     let store = open_store()?;
 
-    let store_obj: SpatialObject = match get_object(&store, &format!("store:{store_id}")) {
+    let store_obj: SpatialObject = match get_object(&store, &format!("store:{store_id}")).await {
         Some(s) => s,
         None => return Ok(json_response(404, &ErrorResponse {
             error: format!("Store {store_id} not found"),
@@ -541,7 +542,7 @@ fn handle_position(req: Request, params: Params) -> anyhow::Result<impl IntoResp
 
     // Zone detection
     let opts = QueryOpts { precision: 9, min_precision: 8, include_neighbors: true, radius_m: None };
-    let context = query_point(&store, lat, lon, &opts);
+    let context = query_point(&store, lat, lon, &opts).await;
 
     let current_dept = context.objects.iter()
         .filter(|o| o.obj_type == "department")
@@ -550,7 +551,7 @@ fn handle_position(req: Request, params: Params) -> anyhow::Result<impl IntoResp
         .map(|s| s.to_string());
 
     // Nearby departments with distances
-    let departments = get_store_departments(&store, store_id);
+    let departments = get_store_departments(&store, store_id).await;
     let mut nearby: Vec<NearbyItem> = departments.iter()
         .map(|d| {
             let dept_name = d.metadata.get("department")
@@ -582,7 +583,7 @@ fn handle_position(req: Request, params: Params) -> anyhow::Result<impl IntoResp
 // GET /api/v1/stores/:storeId/context — Contextual Content
 // ============================================================
 
-fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
+async fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
     let store_id = params.get("storeId").unwrap_or("");
     let qs = parse_query_string(req.uri());
     let lat: f64 = qs.get("lat").and_then(|s| s.parse().ok()).unwrap_or(f64::NAN);
@@ -596,7 +597,7 @@ fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoRespo
 
     let store = open_store()?;
 
-    let store_obj: SpatialObject = match get_object(&store, &format!("store:{store_id}")) {
+    let store_obj: SpatialObject = match get_object(&store, &format!("store:{store_id}")).await {
         Some(s) => s,
         None => return Ok(json_response(404, &ErrorResponse {
             error: format!("Store {store_id} not found"),
@@ -605,7 +606,7 @@ fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoRespo
 
     // Zone detection
     let opts = QueryOpts { precision: 9, min_precision: 8, include_neighbors: true, radius_m: None };
-    let context = query_point(&store, lat, lon, &opts);
+    let context = query_point(&store, lat, lon, &opts).await;
 
     let current_dept = context.objects.iter()
         .filter(|o| o.obj_type == "department")
@@ -626,7 +627,7 @@ fn handle_context(req: Request, params: Params) -> anyhow::Result<impl IntoRespo
     };
 
     // Departments nearby with distances and floor plan coords
-    let departments = get_store_departments(&store, store_id);
+    let departments = get_store_departments(&store, store_id).await;
     let mut dept_contexts: Vec<DepartmentContext> = departments.iter()
         .map(|d| {
             let dept_name = d.metadata.get("department")
@@ -828,7 +829,7 @@ async fn handle_recommend(req: Request, _params: Params) -> anyhow::Result<impl 
         (None, z)
     } else {
         let store = open_store()?;
-        let state = match get_device_state(&store, &device_id) {
+        let state = match get_device_state(&store, &device_id).await {
             Some(s) => s,
             None => return Ok(json_response(404, &ErrorResponse {
                 error: format!("no state for device {device_id} — check in first"),
